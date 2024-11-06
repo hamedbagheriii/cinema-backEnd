@@ -6,6 +6,8 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/swagger": "^1.1.5",
+    "@prisma/client": "5.22.0",
     "elysia": "latest",
     "prisma": "^5.22.0"
   },
