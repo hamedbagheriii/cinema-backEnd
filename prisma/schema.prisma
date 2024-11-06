@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,10 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id String @id @default(cuid())
-  email String @unique
-  firstName String
-  lastName String
+  id        String @id @default(cuid())
+  email     String @unique
+  fristName String
+  lastName  String
+  password String
+  token sessionToken[]
+  tickets sessionTicket[]
+}
+
+model sessionToken {
+  token String @id @unique
+  userData User @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Movies {
+  id Int @id @default(autoincrement())
+  movieName String
+  decription String
+  time String
+  price Int
+  createdAt DateTime @default(now())
+  reservedSeats Int @default(0)
+  Tickets sessionTicket[]
+}
+
+model sessionTicket {
+  ticket Int @id @unique
+  userData User @relation(fields: [userId] , references: [id]) 
+  userId String
+  movieData Movies @relation(fields: [movieId] , references: [id]) 
+  movieId Int
+  useTicket Boolean @default(false)
+  selectedSeats String 
 }
