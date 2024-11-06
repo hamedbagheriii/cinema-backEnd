@@ -9,4 +9,21 @@ export class authClass {
     }))[0];
     return userData || null;
   }
+
+  async checkToken(token: string) {
+    return (await Prisma.sessionToken.findUnique({
+      where: {
+        token
+      },
+      include: {
+        userData : {
+          include : {
+            tickets : true ,
+          }
+        }
+      }
+    }));
+  }
 }
+
+

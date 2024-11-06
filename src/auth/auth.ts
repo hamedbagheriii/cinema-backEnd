@@ -1,4 +1,4 @@
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, sessionToken, User } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
 
@@ -10,16 +10,19 @@ export const userPanel = new Elysia().group('/auth', (app) => {
     app
       .state('isUser', false)
       .state('userData', null as null | User)
+      .state('checkToken', null as null | any)
 
       // ! چک کردن وجود کاربر و رمز عبور
-      .onBeforeHandle(async ({ body, store }) => {
-        const bodyType = body as { email: string; password: string };
-        const isUserClass = await auth.isUser(bodyType.email || undefined);
+      .onBeforeHandle(async ({ body, store, path }) => {
+        const bodyType = body as { email?: string; password?: string };
+        const isUserClass = await auth.isUser(bodyType?.email || undefined);
         store.isUser = isUserClass ? true : false;
 
         if (
-          isUserClass &&
-          (await Bun.password.verify(bodyType.password, isUserClass.password))
+          path === '/auth/sign-in' ||
+          ('/auth/sign-up' &&
+            isUserClass &&
+            (await Bun.password.verify(bodyType?.password || '', isUserClass.password)))
         ) {
           store.userData = isUserClass || null;
         } else {
@@ -27,35 +30,42 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       })
 
+      // ! چک کردن توکن کاربر
+      .onBeforeHandle(async ({ headers: { authorization }, store }) => {
+        const checkToken = await auth.checkToken((authorization as string) || '');
+        if (checkToken !== null) {
+          store.checkToken = checkToken;
+        } else {
+          store.checkToken = null;
+        }
+      })
+
       // ! ثبت نام کاربر
       .post(
         'sign-up',
-        async ({
-          body: { email, password, fristName, lastName },
-          set,
-          store: { isUser },
-        }) => {
-          if (isUser) {
-            set.status = 401;
-            return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
-          } else {
-            const user = await Prisma.user.create({
-              data: {
-                email,
-                lastName,
-                fristName,
-                password: await Bun.password.hash(password),
-              },
-            });
+        async ({ body: { email, password, fristName, lastName }, store: { isUser } }) => {
+          const user = await Prisma.user.create({
+            data: {
+              email,
+              lastName,
+              fristName,
+              password: await Bun.password.hash(password),
+            },
+          });
 
-            return {
-              message: 'کاربر با موفقیت ثبت نام شد !',
-              data: { ...user, password: null },
-              success: true,
-            };
-          }
+          return {
+            message: 'کاربر با موفقیت ثبت نام شد !',
+            data: { ...user, password: null },
+            success: true,
+          };
         },
         {
+          beforeHandle: async ({ store: { isUser }, set }) => {
+            if (isUser) {
+              set.status = 401;
+              return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
+            }
+          },
           body: t.Object({
             email: t.String(),
             password: t.String(),
@@ -94,9 +104,14 @@ export const userPanel = new Elysia().group('/auth', (app) => {
             });
         },
         {
-          beforeHandle: async ({ store: { userData }, set }) => {
-            if (userData == null) {
-              set.status = 401;
+          beforeHandle: async ({ store: { userData, isUser }, set }) => {
+            set.status = 401;
+            if (!isUser) {
+              return {
+                message: 'کاربر وجود ندارد !',
+                success: false,
+              };
+            } else if (userData == null) {
               return {
                 message: 'ایمیل یا رمز عبور اشتباه است !',
                 success: false,
@@ -110,39 +125,32 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       )
 
-    // // ! یافتن کاربر
-    // .get(
-    //   'user',
-    //   async ({ headers: { authorization }, set }) => {
-    //     const checkToken = await Prisma.sessionToken.findMany({
-    //       where: {
-    //         token: authorization,
-    //       },
-    //       include: {
-    //         userData: {
-    //           include: {
-    //             posts: true,
-    //           },
-    //         },
-    //       },
-    //     });
-    //     if (!checkToken.length) {
-    //       set.status = 401;
-    //       return { message: 'توکن اشتباه است !', success: false };
-    //     } else {
-    //       return {
-    //         message: 'کاربر با موفقیت یافت شد !',
-    //         success: true,
-    //         data: { ...checkToken[0].userData, password: null },
-    //       };
-    //     }
-    //   },
-    //   {
-    //     headers: t.Object({
-    //       authorization: t.String(),
-    //     }),
-    //   }
-    // )
+      // ! وجود توکن اجباری   
+      .guard({
+        headers: t.Object({
+          authorization: t.String(),
+        }),
+      })
+
+      // ! یافتن کاربر
+      .get(
+        'user',
+        async ({ store: { checkToken } }) => {
+          return {
+            message: 'کاربر با موفقیت یافت شد !',
+            success: true,
+            data: { ...checkToken.userData, password: null },
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            if (checkToken == null) {
+              set.status = 401;
+              return { message: 'توکن اشتباه است !', success: false };
+            }
+          },
+        }
+      )
 
     // // ! خروج کاربر
     // .get(
@@ -155,11 +163,6 @@ export const userPanel = new Elysia().group('/auth', (app) => {
     //     });
 
     //     return { message: 'کاربر با موفقیت خارج شد !', success: true };
-    //   },
-    //   {
-    //     headers: t.Object({
-    //       authorization: t.String(),
-    //     }),
     //   }
     // )
 
@@ -208,9 +211,6 @@ export const userPanel = new Elysia().group('/auth', (app) => {
     //       fristName: t.String(),
     //       lastName: t.String(),
     //     }),
-    //     headers: t.Object({
-    //       authorization: t.String(),
-    //     }),
     //   }
     // )
 
@@ -257,9 +257,6 @@ export const userPanel = new Elysia().group('/auth', (app) => {
     //     body: t.Object({
     //       u_password: t.String(),
     //       o_password: t.String(),
-    //     }),
-    //     headers: t.Object({
-    //       authorization: t.String(),
     //     }),
     //   }
     // )

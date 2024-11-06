@@ -18,7 +18,8 @@ model User {
 }
 
 model sessionToken {
-  token String @id @unique
+  id Int @id @default(autoincrement())
+  token String @unique
   userData User @relation(fields: [userId], references: [id])
   userId String
 }
