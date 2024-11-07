@@ -9,7 +9,7 @@ export const movie = new Elysia().group('/movie', (app) => {
       .post(
         '/add',
         async ({
-          body: { movieName, decription, time, price, createdAt, reservedSeats },
+          body: { movieName, decription, time, price, createdAt },
         }) => {
           const movie = await Prisma.movies.create({
             data: {
@@ -17,7 +17,6 @@ export const movie = new Elysia().group('/movie', (app) => {
               movieName,
               time,
               createdAt,
-              reservedSeats,
               price,
             },
           });
@@ -49,7 +48,6 @@ export const movie = new Elysia().group('/movie', (app) => {
             time: t.String(),
             price: t.String(),
             createdAt: t.String(),
-            reservedSeats: t.Number(),
           }),
         }
       )

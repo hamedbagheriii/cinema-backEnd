@@ -31,24 +31,23 @@ model Movies {
   time String
   price String
   createdAt String 
-  reservedSeats Int @default(0)
   Tickets sessionTicket[]
 }
 
 model row {
   id Int  @unique @default(autoincrement())
-  rowID Int 
+  row Int 
   selectedSeats String 
-  tickets sessionTicket @relation(fields: [rowID] , references: [ticket])
+  tickets sessionTicket @relation(fields: [ticket] , references: [ticket])
+  ticket Int 
 }
 
 model sessionTicket {
-  ticket Int @id @unique
-  userData User @relation(fields: [userId] , references: [id]) 
-  userId String
+  ticket Int @unique
+  userData User @relation(fields: [email] , references: [email]) 
+  email String
   movieData Movies @relation(fields: [movieId] , references: [id]) 
   movieId Int
   useTicket Boolean @default(false)
-  rowData row[]
-  rowID Int
+  rows row[]
 }

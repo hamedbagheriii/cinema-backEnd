@@ -25,34 +25,95 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         }),
       })
 
-      .post('/add', async ({ body: { ticket, userId, movieId, rowID , selectedSeats , useTicket} }) => {
-        const addRow = await Prisma.row.create({
-            data : {
-                rowID ,
-                selectedSeats,
-            }
-        }).then(async (res : any)=>{
-            const addTicket = await Prisma.sessionTicket.create({
-                data : {
-                    ticket,
-                    userId,
-                    movieId,
-                    useTicket,
-                    rowID : 5, 
-                }
-            })
+      // ! افزودن صندلی رزرو
+      .post(
+        '/add',
+        async ({ body: { ticket, email, movieId, rows, useTicket } }) => {
+          const addTicket = await Prisma.sessionTicket.create({
+            data: {
+              ticket,
+              email,
+              movieId,
+              useTicket,
+              rows: {
+                create: rows.map((item: any) => {
+                  return {
+                    row: item.row,
+                    selectedSeats: item.selectedSeats.toString(),
+                  };
+                }),
+              },
+            },
+            include: {
+              rows: true,
+            },
+          });
 
-            return {res , addTicket}
-        })
-      }, {
-        body: t.Object({
-          ticket: t.Number(),
-          userId: t.String(),
-          movieId: t.Number(),
-          rowID: t.Number(),
-          useTicket : t.Boolean(),
-          selectedSeats : t.String()
-        }),
-      })
+          return { addTicket };
+        },
+        {
+          body: t.Object({
+            ticket: t.Number(),
+            email: t.String(),
+            movieId: t.Number(),
+            rows: t.Array(
+              t.Object({ selectedSeats: t.Array(t.Number()), row: t.Number() })
+            ),
+            useTicket: t.Boolean(),
+          }),
+        }
+      )
+
+      // ! دریافت صندلی های رزرو شده
+      .get(
+        '/getAll/:movieID',
+        async ({ params: { movieID } }) => {
+          // ! get all tickets
+          const getAllTicket = await Prisma.sessionTicket.findMany({
+            where: {
+              movieId: movieID,
+            },
+            include: {
+              rows: true,
+            },
+          });
+
+          // ! seats to array of string
+          let array_String_Seats: any[] = [];
+          getAllTicket.forEach((item: any) => {
+            item.rows.forEach((row: any) => {
+              array_String_Seats.push({
+                row : row.row,
+                selectedSeats : [...row.selectedSeats.split(',')],
+              });
+            });
+          });
+
+          // ! seats to array of number
+          let result: any[] = [];
+          array_String_Seats.forEach((item: any) => {
+            let array_Number_Seats : any[] = [];
+            item.selectedSeats.map((seat: any) => array_Number_Seats.push(Number(seat)));
+
+            result.push({
+              seats : array_Number_Seats,
+              row : item.row,
+            });
+          });
+
+  
+
+          return {
+            data: result,
+            success: true,
+            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
+          };
+        },
+        {
+          params: t.Object({
+            movieID: t.Number(),
+          }),
+        }
+      )
   );
 });
