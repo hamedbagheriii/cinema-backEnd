@@ -26,20 +26,20 @@ model sessionToken {
 
 model Movies {
   id Int @id @default(autoincrement())
-  movieName String
+  movieName String @unique
   decription String
   time String
-  price Int
-  createdAt DateTime @default(now())
+  price String
+  createdAt String 
   reservedSeats Int @default(0)
   Tickets sessionTicket[]
 }
 
 model row {
-  id Int @id @default(autoincrement())
-  rowID Int @unique
+  id Int  @unique @default(autoincrement())
+  rowID Int 
   selectedSeats String 
-  tickets sessionTicket[]
+  tickets sessionTicket @relation(fields: [rowID] , references: [ticket])
 }
 
 model sessionTicket {
@@ -49,6 +49,6 @@ model sessionTicket {
   movieData Movies @relation(fields: [movieId] , references: [id]) 
   movieId Int
   useTicket Boolean @default(false)
-  rowData row @relation(fields: [rowID] , references: [rowID])
-  rowID Int 
+  rowData row[]
+  rowID Int
 }

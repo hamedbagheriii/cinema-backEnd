@@ -4,7 +4,7 @@ import { authClass } from './isUser';
 
 // ! dependencies
 export const Prisma = new PrismaClient();
-const auth = new authClass();
+export const auth = new authClass();
 
 // ! body validation
 const body = t.Object({
