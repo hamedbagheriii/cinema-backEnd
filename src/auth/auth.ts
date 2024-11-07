@@ -84,7 +84,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
             }
           },
-          body
+          body,
         }
       )
 
@@ -181,7 +181,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           // ! تغیر ایمیل کاربر امکان پذیر نیست زیرا یونیک است
           const user = await Prisma.user.update({
             where: {
-              id:  checkToken.userId
+              id: checkToken.userId,
             },
             data: {
               lastName,
@@ -196,55 +196,52 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
         },
         {
-          body 
+          body,
         }
       )
 
-    // // ! ویرایش رمز عبور کاربر
-    // .put(
-    //   'update/password',
-    //   async ({ body: { u_password, o_password }, headers: { authorization }, set }) => {
-    //     const checkToken = await Prisma.section.findMany({
-    //       where: {
-    //         token: authorization,
-    //       },
-    //       include: {
-    //         userData: true,
-    //       },
-    //     });
+      // ! ویرایش رمز عبور کاربر
+      .put(
+        'update/password',
+        async ({ body: { u_password }, store: { checkToken } }) => {
+          const user = await Prisma.user.update({
+            where: {
+              id: checkToken.userId,
+            },
+            data: {
+              password: await Bun.password.hash(u_password),
+            },
+          });
 
-    //     // ! بررسی رمز عبور قبلی
-    //     const checkPassword = await Bun.password.verify(
-    //       o_password,
-    //       checkToken[0].userData.password
-    //     );
+          return {
+            message: 'رمز عبور کاربر با موفقیت ویرایش شد !',
+            data: { ...user, password: null },
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, body, set }) => {
+            const checkPassword = await Bun.password.verify(
+              body.o_password,
+              checkToken.userData.password
+            );
 
-    //     if (!checkToken.length || !checkPassword) {
-    //       set.status = 401;
-    //       return { message: 'توکن یا رمز عبور اشتباه است !', success: false };
-    //     } else {
-    //       const user = await Prisma.user.update({
-    //         where: {
-    //           id: checkToken[0].userId,
-    //         },
-    //         data: {
-    //           password: await Bun.password.hash(u_password),
-    //         },
-    //       });
-
-    //       return {
-    //         message: 'رمز عبور کاربر با موفقیت ویرایش شد !',
-    //         data: { ...user, password: null },
-    //         success: true,
-    //       };
-    //     }
-    //   },
-    //   {
-    //     body: t.Object({
-    //       u_password: t.String(),
-    //       o_password: t.String(),
-    //     }),
-    //   }
-    // )
+            if (!checkPassword) {
+              set.status = 401;
+              return { message: 'رمز عبور اشتباه است !', success: false };
+            }
+          },
+          body: t.Object({
+            u_password: t.String({
+              minLength: 6,
+              error: 'رمز عبور جدید حداقل 6 کاراکتر باید باشد !',
+            }),
+            o_password: t.String({
+              minLength: 6,
+              error: 'رمز عبور فعلی حداقل 6 کاراکتر باید باشد !',
+            }),
+          }),
+        }
+      )
   );
 });
