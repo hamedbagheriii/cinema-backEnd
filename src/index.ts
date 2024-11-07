@@ -1,5 +1,4 @@
 import swagger from "@elysiajs/swagger";
-import { PrismaClient } from "@prisma/client";
 import { Elysia, error, t } from "elysia";
 import { userPanel } from "./auth/auth";
 

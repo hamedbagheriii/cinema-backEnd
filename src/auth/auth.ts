@@ -2,8 +2,26 @@ import { PrismaClient, sessionToken, User } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
 
+// ! dependencies
 export const Prisma = new PrismaClient();
 const auth = new authClass();
+
+// ! body validation
+const body = t.Object({
+  email: t.String(),
+  password: t.String({
+    minLength: 6,
+    error: 'رمز عبور باید حداقل 6 کاراکتر داشته باشد !',
+  }),
+  fristName: t.String({
+    minLength: 2,
+    error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+  }),
+  lastName: t.String({
+    minLength: 3,
+    error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
+  }),
+});
 
 export const userPanel = new Elysia().group('/auth', (app) => {
   return (
@@ -66,21 +84,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
             }
           },
-          body: t.Object({
-            email: t.String(),
-            password: t.String({
-              minLength: 6,
-              error: 'رمز عبور باید حداقل 6 کاراکتر داشته باشد !',
-            }),
-            fristName: t.String({
-              minLength: 2,
-              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
-            }),
-            lastName: t.String({
-              minLength: 3,
-              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
-            }),
-          }),
+          body
         }
       )
 
@@ -170,53 +174,31 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         return { message: 'کاربر با موفقیت خارج شد !', success: true };
       })
 
-    // // ! ویرایش کاربر
-    // .put(
-    //   'update',
-    //   async ({
-    //     body: { email, fristName, lastName },
-    //     headers: { authorization },
-    //     set,
-    //   }) => {
-    //     const checkToken = await Prisma.section.findMany({
-    //       where: {
-    //         token: authorization,
-    //       },
-    //       include: {
-    //         userData: true,
-    //       },
-    //     });
+      // ! ویرایش کاربر
+      .put(
+        'update',
+        async ({ body: { email, fristName, lastName }, store: { checkToken } }) => {
+          // ! تغیر ایمیل کاربر امکان پذیر نیست زیرا یونیک است
+          const user = await Prisma.user.update({
+            where: {
+              id:  checkToken.userId
+            },
+            data: {
+              lastName,
+              fristName,
+            },
+          });
 
-    //     if (!checkToken.length) {
-    //       set.status = 401;
-    //       return { message: 'توکن اشتباه است !', success: false };
-    //     } else {
-    //       const user = await Prisma.user.update({
-    //         where: {
-    //           id: checkToken[0].userId,
-    //         },
-    //         data: {
-    //           email,
-    //           lastName,
-    //           fristName,
-    //         },
-    //       });
-
-    //       return {
-    //         message: 'کاربر با موفقیت ویرایش شد !',
-    //         data: { ...user, password: null },
-    //         success: true,
-    //       };
-    //     }
-    //   },
-    //   {
-    //     body: t.Object({
-    //       email: t.String(),
-    //       fristName: t.String(),
-    //       lastName: t.String(),
-    //     }),
-    //   }
-    // )
+          return {
+            message: 'کاربر با موفقیت ویرایش شد !',
+            data: { ...user, password: null },
+            success: true,
+          };
+        },
+        {
+          body 
+        }
+      )
 
     // // ! ویرایش رمز عبور کاربر
     // .put(
