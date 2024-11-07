@@ -1,29 +1,31 @@
-import { Prisma } from "./auth";
+import { Prisma } from './auth';
 
 export class authClass {
-  async isUser(email: string | undefined) {
-    const userData = (await Prisma.user.findMany({
-      where: {
-        email: email,
-      },
-    }))[0];
-    return userData || null;
+  async isUser(email: string | null) {
+    if (email !== null) {
+      const userData = (
+        await Prisma.user.findUnique({
+          where: {
+            email: email,
+          },
+        })
+      );
+      return userData || null;
+    }
   }
 
   async checkToken(token: string) {
-    return (await Prisma.sessionToken.findUnique({
+    return await Prisma.sessionToken.findUnique({
       where: {
-        token
+        token,
       },
       include: {
-        userData : {
-          include : {
-            tickets : true ,
-          }
-        }
-      }
-    }));
+        userData: {
+          include: {
+            tickets: true,
+          },
+        },
+      },
+    });
   }
 }
-
-

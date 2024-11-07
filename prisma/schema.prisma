@@ -35,6 +35,13 @@ model Movies {
   Tickets sessionTicket[]
 }
 
+model row {
+  id Int @id @default(autoincrement())
+  rowID Int @unique
+  selectedSeats String 
+  tickets sessionTicket[]
+}
+
 model sessionTicket {
   ticket Int @id @unique
   userData User @relation(fields: [userId] , references: [id]) 
@@ -42,5 +49,6 @@ model sessionTicket {
   movieData Movies @relation(fields: [movieId] , references: [id]) 
   movieId Int
   useTicket Boolean @default(false)
-  selectedSeats String 
+  rowData row @relation(fields: [rowID] , references: [rowID])
+  rowID Int 
 }

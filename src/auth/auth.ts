@@ -14,19 +14,19 @@ export const userPanel = new Elysia().group('/auth', (app) => {
 
       // ! چک کردن وجود کاربر و رمز عبور
       .onBeforeHandle(async ({ body, store, path }) => {
-        const bodyType = body as { email?: string; password?: string };
-        const isUserClass = await auth.isUser(bodyType?.email || undefined);
-        store.isUser = isUserClass ? true : false;
+        if (path === '/auth/sign-in' || path === '/auth/sign-up') {
+          const bodyType = body as { email: string; password: string };
+          const isUserClass = await auth.isUser(bodyType.email);
+          store.isUser = isUserClass ? true : false;
 
-        if (
-          path === '/auth/sign-in' ||
-          ('/auth/sign-up' &&
+          if (
             isUserClass &&
-            (await Bun.password.verify(bodyType?.password || '', isUserClass.password)))
-        ) {
-          store.userData = isUserClass || null;
-        } else {
-          store.userData = null;
+            (await Bun.password.verify(bodyType.password, isUserClass.password))
+          ) {
+            store.userData = isUserClass || null;
+          } else {
+            store.userData = null;
+          }
         }
       })
 
@@ -43,7 +43,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       // ! ثبت نام کاربر
       .post(
         'sign-up',
-        async ({ body: { email, password, fristName, lastName }, store: { isUser } }) => {
+        async ({ body: { email, password, fristName, lastName } }) => {
           const user = await Prisma.user.create({
             data: {
               email,
@@ -68,9 +68,18 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           },
           body: t.Object({
             email: t.String(),
-            password: t.String(),
-            fristName: t.String(),
-            lastName: t.String(),
+            password: t.String({
+              minLength: 6,
+              error: 'رمز عبور باید حداقل 6 کاراکتر داشته باشد !',
+            }),
+            fristName: t.String({
+              minLength: 2,
+              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+            }),
+            lastName: t.String({
+              minLength: 3,
+              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
+            }),
           }),
         }
       )
@@ -120,51 +129,46 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           },
           body: t.Object({
             email: t.String(),
-            password: t.String(),
+            password: t.String({
+              minLength: 6,
+              error: 'رمز عبور باید حداقل 6 کاراکتر داشته باشد !',
+            }),
           }),
         }
       )
 
-      // ! وجود توکن اجباری   
+      // ! وجود توکن اجباری
       .guard({
         headers: t.Object({
           authorization: t.String(),
         }),
       })
+      .onBeforeHandle(async ({ store: { checkToken }, set }) => {
+        if (checkToken == null) {
+          set.status = 404;
+          return { message: 'توکن اشتباه است !', success: false };
+        }
+      })
 
       // ! یافتن کاربر
-      .get(
-        'user',
-        async ({ store: { checkToken } }) => {
-          return {
-            message: 'کاربر با موفقیت یافت شد !',
-            success: true,
-            data: { ...checkToken.userData, password: null },
-          };
-        },
-        {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
-            if (checkToken == null) {
-              set.status = 401;
-              return { message: 'توکن اشتباه است !', success: false };
-            }
+      .get('user', async ({ store: { checkToken } }) => {
+        return {
+          message: 'کاربر با موفقیت یافت شد !',
+          success: true,
+          data: { ...checkToken.userData, password: null },
+        };
+      })
+
+      // ! خروج کاربر
+      .get('logout', async ({ store: { checkToken } }) => {
+        await Prisma.sessionToken.deleteMany({
+          where: {
+            token: checkToken.token,
           },
-        }
-      )
+        });
 
-    // // ! خروج کاربر
-    // .get(
-    //   'logout',
-    //   async ({ headers: { authorization } }) => {
-    //     await Prisma.sessionToken.deleteMany({
-    //       where: {
-    //         toekn: authorization,
-    //       },
-    //     });
-
-    //     return { message: 'کاربر با موفقیت خارج شد !', success: true };
-    //   }
-    // )
+        return { message: 'کاربر با موفقیت خارج شد !', success: true };
+      })
 
     // // ! ویرایش کاربر
     // .put(
