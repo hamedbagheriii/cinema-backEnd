@@ -1,5 +1,9 @@
 import Elysia, { t } from 'elysia';
 import { Prisma } from '../auth/auth';
+import { stToArrClass } from '../tickets/stToArr';
+
+// ! dependencies
+export const arrNumberClass = new stToArrClass();
 
 export const movie = new Elysia().group('/movie', (app) => {
   return (
@@ -8,9 +12,7 @@ export const movie = new Elysia().group('/movie', (app) => {
       // ! افزودن فیلم
       .post(
         '/add',
-        async ({
-          body: { movieName, decription, time, price, createdAt },
-        }) => {
+        async ({ body: { movieName, decription, time, price, createdAt } }) => {
           const movie = await Prisma.movies.create({
             data: {
               decription,
@@ -74,6 +76,44 @@ export const movie = new Elysia().group('/movie', (app) => {
         {
           params: t.Object({
             id: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // ! دریافت صندلی های رزرو شده
+      .get(
+        '/resarvedSeats/:movieID',
+        async ({ params: { movieID } }) => {
+          // ! دریافت تیکت های مربوط به فیلم 
+          const getAllTicket = await Prisma.sessionTicket.findMany({
+            where: {
+              movieId: movieID,
+            },
+            include: {
+              rows: true,
+            },
+          });
+
+          // ! تبدیل صندلی های رزرو به آرایه
+          let allSeats: any[] = [];
+          getAllTicket.forEach((item: any) => {
+            item.rows.forEach(async (row: any) => {
+              allSeats.push({
+                row: row.row,
+                selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
+              });
+            });
+          });
+
+          return {
+            data: allSeats,
+            success: true,
+            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
+          };
+        },
+        {
+          params: t.Object({
+            movieID: t.Number(),
           }),
         }
       )

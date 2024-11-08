@@ -1,5 +1,6 @@
 import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
+import { arrNumberClass } from '../movie/movie';
 
 export const ticket = new Elysia().group('/ticket', (app) => {
   return (
@@ -25,7 +26,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         }),
       })
 
-      // ! افزودن صندلی رزرو
+      // ! افزودن تیکت
       .post(
         '/add',
         async ({ body: { ticket, email, movieId, rows, useTicket } }) => {
@@ -64,56 +65,30 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         }
       )
 
-      // ! دریافت صندلی های رزرو شده
-      .get(
-        '/getAll/:movieID',
-        async ({ params: { movieID } }) => {
-          // ! get all tickets
-          const getAllTicket = await Prisma.sessionTicket.findMany({
-            where: {
-              movieId: movieID,
-            },
-            include: {
-              rows: true,
-            },
+      // ! دریافت تیکت ها
+      .get('/', async ({ store: { checkToken } }) => {
+        const tickets = await Prisma.sessionTicket.findMany({
+          where: {
+            email: checkToken.email,
+          },
+          include: {
+            movieData: true,
+            rows: true,
+          },
+        });
+
+        // ! تبدیل صندلی های رزرو به آرایه
+        tickets.forEach((item: any) => {
+          item.rows.forEach(async (row: any) => {
+            row.selectedSeats = await arrNumberClass.stToArr(row.selectedSeats);
           });
+        });
 
-          // ! seats to array of string
-          let array_String_Seats: any[] = [];
-          getAllTicket.forEach((item: any) => {
-            item.rows.forEach((row: any) => {
-              array_String_Seats.push({
-                row : row.row,
-                selectedSeats : [...row.selectedSeats.split(',')],
-              });
-            });
-          });
-
-          // ! seats to array of number
-          let result: any[] = [];
-          array_String_Seats.forEach((item: any) => {
-            let array_Number_Seats : any[] = [];
-            item.selectedSeats.map((seat: any) => array_Number_Seats.push(Number(seat)));
-
-            result.push({
-              seats : array_Number_Seats,
-              row : item.row,
-            });
-          });
-
-  
-
-          return {
-            data: result,
-            success: true,
-            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
-          };
-        },
-        {
-          params: t.Object({
-            movieID: t.Number(),
-          }),
-        }
-      )
+        return {
+          data: tickets,
+          success: true,
+          message: 'تیکت ها با موفقیت دریافت شدند !',
+        };
+      })
   );
 });
