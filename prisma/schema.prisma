@@ -32,7 +32,8 @@ model Movies {
   price      String
   createdAt  String
   Tickets    sessionTicket[]
-  cinemas    cinema[]
+  cinemaData cinema @relation(fields: [cinemaID], references: [id])
+  cinemaID   Int
 }
 
 model row {
@@ -62,9 +63,9 @@ model cinema {
   city       String
   province   String
   halls      Hall[]
-  movieData  Movies @relation(fields: [movieID], references: [id])
-  movieID    Int
+  movies     Movies[] 
 }
+
 
 model Hall {
   id          Int    @unique @default(autoincrement())
