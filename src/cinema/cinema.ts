@@ -44,9 +44,18 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               where: {
                 id,
               },
+              include: {
+                halls: true,
+                movies: true,
+              },
             });
           } else {
-            cinemas = await Prisma.cinema.findMany();
+            cinemas = await Prisma.cinema.findMany({
+              include: {
+                halls: true,
+                movies: true,
+              },
+            });
           }
 
           return {
@@ -66,7 +75,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
 
       // ! add halls
       .post(
-        '/hall/add',
+        '/halls/add',
         async ({ body: { hallName, maximumRows, cinemaID } }) => {
           const hall = await Prisma.hall.create({
             data: {
@@ -91,6 +100,41 @@ export const cinema = new Elysia().group('/cinema', (app) => {
         }
       )
 
-    //   ! get halls
+      // ! get halls
+      .get(
+        '/halls/:id?',
+        async ({ params: { id } }) => {
+          let halls;
+          if (id) {
+            halls = await Prisma.hall.findUnique({
+              where: {
+                id,
+              },
+              include: {
+                dates: true,
+                cinemaData: true,
+              },
+            });
+          } else {
+            halls = await Prisma.hall.findMany({
+                include : {
+                    cinemaData : true,
+                    dates : true
+                }
+            });
+          }
+
+          return {
+            data: halls,
+            message: 'دریافت سالن ها با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.Number()),
+          }),
+        }
+      )
   );
 });
