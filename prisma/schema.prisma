@@ -32,8 +32,8 @@ model Movies {
   price      String
   createdAt  String
   Tickets    sessionTicket[]
-  cinemaData cinema @relation(fields: [cinemaID], references: [id])
-  cinemaID   Int
+  cinemaData cinema? @relation(fields: [cinemaID], references: [id])
+  cinemaID   Int?
 }
 
 model row {
@@ -52,6 +52,14 @@ model sessionTicket {
   movieId   Int
   useTicket Boolean @default(false)
   rows      row[]
+  cinemaData cinema @relation(fields: [cinemaID], references: [id])
+  cinemaID  Int
+  hallData  Hall   @relation(fields: [hallID], references: [id])
+  hallID    Int
+  dateEvent date @relation(fields: [date], references: [date])
+  date      DateTime
+  dateTime  dateTime @relation(fields: [Time], references: [Time])
+  Time  String
 }
 
 // ! ----- MODELS FOR CINEMA ----- !
@@ -64,6 +72,8 @@ model cinema {
   province   String
   halls      Hall[]
   movies     Movies[] 
+  tickets    sessionTicket[]
+  dates       date[]
 }
 
 
@@ -71,14 +81,27 @@ model Hall {
   id          Int    @unique @default(autoincrement())
   hallName    String
   maximumRows Int
-  dates       date[]
   cinemaData  cinema @relation(fields: [cinemaID], references: [id])
   cinemaID    Int
+  tickets     sessionTicket[]
+  dateTime dateTime @relation(fields: [Time], references: [Time])
+  Time String
 }
 
 model date {
   id       Int      @id @default(autoincrement())
   date     DateTime @unique
-  hallData Hall     @relation(fields: [hallID], references: [id])
-  hallID   Int
+  cinemaData cinema     @relation(fields: [cinemaID], references: [id])
+  cinemaID   Int
+  tickets  sessionTicket[]
+  dateTimes dateTime[]
+}
+
+model dateTime {
+  id       Int      @id @default(autoincrement())
+  Time     String @unique
+  dateData date     @relation(fields: [date], references: [date])
+  date DateTime
+  tickets  sessionTicket[]
+  halls     Hall[]
 }

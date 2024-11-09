@@ -20,12 +20,8 @@ export const movie = new Elysia().group('/movie', (app) => {
               time,
               createdAt,
               price,
-              cinemas: {
-                connect: {
-                  id: cinemaID,
-                },
-              },
-            },
+              cinemaID : cinemaID || null,
+            }
           });
 
           return {
@@ -55,7 +51,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             time: t.String(),
             price: t.String(),
             createdAt: t.String(),
-            cinemaID: t.Number(),
+            cinemaID: t.Optional(t.Number()),
           }),
         }
       )
@@ -69,13 +65,13 @@ export const movie = new Elysia().group('/movie', (app) => {
             movies = await Prisma.movies.findUnique({
               where: { id },
               include: {
-                cinemas: true,
+                cinemaData: true,
               },
             });
           } else {
             movies = await Prisma.movies.findMany({
               include: {
-                cinemas: true,
+                cinemaData: true,
               },
             });
           }
@@ -93,64 +89,50 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
-      // ! دریافت صندلی های رزرو شده
-      .get(
-        '/resarvedSeats/:movieID/:cinemaID/:hallID',
-        async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
-          // ! دریافت تیکت های مربوط به فیلم
-          const getAllTicket = await Prisma.sessionTicket.findMany({
-            where: {
-              movieId: movieID,
-              movieData: {
-                cinemas: {
-                  every: {
-                    id: cinemaID,
-                    halls: {
-                      every: {
-                        id: hallID,
-                        dates: {
-                          every: {
-                            date: dateEvent,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            include: {
-              rows: true,
-            },
-          });
+    // ! دریافت صندلی های رزرو شده
+    .get(
+      '/resarvedSeats/:movieID/:cinemaID/:hallID',
+      async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
+        // ! دریافت تیکت های مربوط به فیلم
+        const getAllTicket = await Prisma.sessionTicket.findMany({
+          where: {
+            movieId: movieID,
+            cinemaID,
+            hallID,
+            date : dateEvent
+          },
+          include: {
+            rows: true,
+          },
+        });
 
-          // ! تبدیل صندلی های رزرو به آرایه
-          let allSeats: any[] = [];
-          getAllTicket.forEach((item: any) => {
-            item.rows.forEach(async (row: any) => {
-              allSeats.push({
-                row: row.row,
-                selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
-              });
+        // ! تبدیل صندلی های رزرو به آرایه
+        let allSeats: any[] = [];
+        getAllTicket.forEach((item: any) => {
+          item.rows.forEach(async (row: any) => {
+            allSeats.push({
+              row: row.row,
+              selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
             });
           });
+        });
 
-          return {
-            data: allSeats,
-            success: true,
-            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
-          };
-        },
-        {
-          params: t.Object({
-            movieID: t.Number(),
-            cinemaID: t.Number(),
-            hallID: t.Number(),
-          }),
-          query: t.Object({
-            dateEvent: t.Date(),
-          }),
-        }
-      )
+        return {
+          data: allSeats,
+          success: true,
+          message: 'صندلی های رزرو با موفقیت دریافت شدند !',
+        };
+      },
+      {
+        params: t.Object({
+          movieID: t.Number(),
+          cinemaID: t.Number(),
+          hallID: t.Number(),
+        }),
+        query: t.Object({
+          dateEvent: t.Date(),
+        }),
+      }
+    )
   );
 });

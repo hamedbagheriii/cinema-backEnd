@@ -8,19 +8,25 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! add cinema
       .post(
         '/add',
-        async ({ body: { cinemaName, address, city, province } }) => {
+        async ({ body: { cinemaName, address, city, province, movies } }) => {
           const cinema = await Prisma.cinema.create({
             data: {
               cinemaName,
               address,
               city,
               province,
+              movies: {
+                connect: movies.map((movie: number) => ({ id: movie })),
+              },
             },
+            include : {
+              movies : true
+            }
           });
 
           return {
             data: cinema,
-            message: 'افزودن سالن با موفقیت انجام شد !',
+            message: 'افزودن سینما با موفقیت انجام شد !',
             success: true,
           };
         },
@@ -30,6 +36,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             address: t.String(),
             city: t.String(),
             province: t.String(),
+            movies: t.Array(t.Number()),
           }),
         }
       )
@@ -117,10 +124,10 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             });
           } else {
             halls = await Prisma.hall.findMany({
-                include : {
-                    cinemaData : true,
-                    dates : true
-                }
+              include: {
+                cinemaData: true,
+                dates: true,
+              },
             });
           }
 
@@ -133,6 +140,35 @@ export const cinema = new Elysia().group('/cinema', (app) => {
         {
           params: t.Object({
             id: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // ! ==================== Dates ====================
+
+      // ! add dates
+      .post(
+        '/dates/add',
+        async ({ body: { date, hallID , cinemaID } }) => {
+          const dateRecord = await Prisma.date.create({
+            data: {
+              date,
+              cinemaID,
+              hallID,
+            },
+          });
+
+          return {
+            data: dateRecord,
+            message: 'افزودن تاریخ با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          body: t.Object({
+            date: t.Date(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
           }),
         }
       )

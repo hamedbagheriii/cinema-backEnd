@@ -29,7 +29,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
       // ! افزودن تیکت
       .post(
         '/add',
-        async ({ body: { ticket, email, movieId, rows, useTicket } }) => {
+        async ({ body: { ticket, email, movieId, rows, useTicket , cinemaID , hallID , dateEvent } }) => {
           const addTicket = await Prisma.sessionTicket.create({
             data: {
               ticket,
@@ -44,6 +44,9 @@ export const ticket = new Elysia().group('/ticket', (app) => {
                   };
                 }),
               },
+              cinemaID,
+              hallID,
+              date : dateEvent,
             },
             include: {
               rows: true,
@@ -61,6 +64,9 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               t.Object({ selectedSeats: t.Array(t.Number()), row: t.Number() })
             ),
             useTicket: t.Boolean(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
+            dateEvent: t.Date(),
           }),
         }
       )
@@ -74,6 +80,9 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           include: {
             movieData: true,
             rows: true,
+            cinemaData: true,
+            hallData: true,
+            dateEvent: true,
           },
         });
 
