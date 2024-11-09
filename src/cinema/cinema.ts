@@ -19,9 +19,9 @@ export const cinema = new Elysia().group('/cinema', (app) => {
                 connect: movies.map((movie: number) => ({ id: movie })),
               },
             },
-            include : {
-              movies : true
-            }
+            include: {
+              movies: true,
+            },
           });
 
           return {
@@ -118,7 +118,6 @@ export const cinema = new Elysia().group('/cinema', (app) => {
                 id,
               },
               include: {
-                dates: true,
                 cinemaData: true,
               },
             });
@@ -126,7 +125,6 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             halls = await Prisma.hall.findMany({
               include: {
                 cinemaData: true,
-                dates: true,
               },
             });
           }
@@ -149,12 +147,11 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! add dates
       .post(
         '/dates/add',
-        async ({ body: { date, hallID , cinemaID } }) => {
+        async ({ body: { date, cinemaID } }) => {
           const dateRecord = await Prisma.date.create({
             data: {
               date,
               cinemaID,
-              hallID,
             },
           });
 
@@ -168,9 +165,38 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           body: t.Object({
             date: t.Date(),
             cinemaID: t.Number(),
-            hallID: t.Number(),
           }),
         }
       )
+
+      // ! get dates
+      .get(
+        '/dates',
+        async ({ query: { cinemaID } }) => {
+          const dates = await Prisma.date.findMany({
+            where: {
+              cinemaID,
+            },
+            include: {
+              dateTimes: true,
+              cinemaData: true,
+            },
+          });
+
+          return {
+            data: dates,
+            message: 'دریافت تاریخ ها با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          query: t.Object({
+            cinemaID: t.Number(),
+          }),
+        }
+      )
+
+      // ! ==================== Date Times ====================
+      
   );
 });

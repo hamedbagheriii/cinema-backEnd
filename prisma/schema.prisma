@@ -84,8 +84,6 @@ model Hall {
   cinemaData  cinema @relation(fields: [cinemaID], references: [id])
   cinemaID    Int
   tickets     sessionTicket[]
-  dateTime dateTime @relation(fields: [Time], references: [Time])
-  Time String
 }
 
 model date {
@@ -103,5 +101,4 @@ model dateTime {
   dateData date     @relation(fields: [date], references: [date])
   date DateTime
   tickets  sessionTicket[]
-  halls     Hall[]
 }
