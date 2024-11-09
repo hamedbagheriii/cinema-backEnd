@@ -8,46 +8,76 @@ datasource db {
 }
 
 model User {
-  id        String @id @default(cuid())
-  email     String @unique
+  id        String          @id @default(cuid())
+  email     String          @unique
   fristName String
   lastName  String
-  password String
-  token sessionToken[]
-  tickets sessionTicket[]
+  password  String
+  token     sessionToken[]
+  tickets   sessionTicket[]
 }
 
 model sessionToken {
-  id Int @id @default(autoincrement())
-  token String @unique
-  userData User @relation(fields: [userId], references: [id])
-  userId String
+  id       Int    @id @default(autoincrement())
+  token    String @unique
+  userData User   @relation(fields: [userId], references: [id])
+  userId   String
 }
 
 model Movies {
-  id Int @id @default(autoincrement())
-  movieName String @unique
+  id         Int             @id @unique @default(autoincrement())
+  movieName  String          @unique
   decription String
-  time String
-  price String
-  createdAt String 
-  Tickets sessionTicket[]
+  time       String
+  price      String
+  createdAt  String
+  Tickets    sessionTicket[]
+  cinemas    cinema[]
 }
 
 model row {
-  id Int  @unique @default(autoincrement())
-  row Int 
-  selectedSeats String 
-  tickets sessionTicket @relation(fields: [ticket] , references: [ticket])
-  ticket Int 
+  id            Int           @unique @default(autoincrement())
+  row           Int
+  selectedSeats String
+  tickets       sessionTicket @relation(fields: [ticket], references: [ticket])
+  ticket        Int
 }
 
 model sessionTicket {
-  ticket Int @unique
-  userData User @relation(fields: [email] , references: [email]) 
-  email String
-  movieData Movies @relation(fields: [movieId] , references: [id]) 
-  movieId Int
+  ticket    Int     @unique
+  userData  User    @relation(fields: [email], references: [email])
+  email     String
+  movieData Movies  @relation(fields: [movieId], references: [id])
+  movieId   Int
   useTicket Boolean @default(false)
-  rows row[]
+  rows      row[]
+}
+
+// ! ----- MODELS FOR CINEMA ----- !
+
+model cinema {
+  id         Int    @unique @default(autoincrement())
+  cinemaName String
+  address    String
+  city       String
+  province   String
+  halls      Hall[]
+  movieData  Movies @relation(fields: [movieID], references: [id])
+  movieID    Int
+}
+
+model Hall {
+  id          Int    @unique @default(autoincrement())
+  hallName    String
+  maximumRows Int
+  dates       date[]
+  cinemaData  cinema @relation(fields: [cinemaID], references: [id])
+  cinemaID    Int
+}
+
+model date {
+  id       Int      @id @default(autoincrement())
+  date     DateTime @unique
+  hallData Hall     @relation(fields: [hallID], references: [id])
+  hallID   Int
 }

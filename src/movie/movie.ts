@@ -12,7 +12,7 @@ export const movie = new Elysia().group('/movie', (app) => {
       // ! افزودن فیلم
       .post(
         '/add',
-        async ({ body: { movieName, decription, time, price, createdAt } }) => {
+        async ({ body: { movieName, decription, time, price, createdAt, cinemaID } }) => {
           const movie = await Prisma.movies.create({
             data: {
               decription,
@@ -20,6 +20,11 @@ export const movie = new Elysia().group('/movie', (app) => {
               time,
               createdAt,
               price,
+              cinemas: {
+                connect: {
+                  id: cinemaID,
+                },
+              },
             },
           });
 
@@ -50,6 +55,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             time: t.String(),
             price: t.String(),
             createdAt: t.String(),
+            cinemaID: t.Number(),
           }),
         }
       )
@@ -62,9 +68,16 @@ export const movie = new Elysia().group('/movie', (app) => {
           if (id) {
             movies = await Prisma.movies.findUnique({
               where: { id },
+              include: {
+                cinemas: true,
+              },
             });
           } else {
-            movies = await Prisma.movies.findMany();
+            movies = await Prisma.movies.findMany({
+              include: {
+                cinemas: true,
+              },
+            });
           }
 
           return {
@@ -82,12 +95,29 @@ export const movie = new Elysia().group('/movie', (app) => {
 
       // ! دریافت صندلی های رزرو شده
       .get(
-        '/resarvedSeats/:movieID',
-        async ({ params: { movieID } }) => {
-          // ! دریافت تیکت های مربوط به فیلم 
+        '/resarvedSeats/:movieID/:cinemaID/:hallID',
+        async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
+          // ! دریافت تیکت های مربوط به فیلم
           const getAllTicket = await Prisma.sessionTicket.findMany({
             where: {
               movieId: movieID,
+              movieData: {
+                cinemas: {
+                  every: {
+                    id: cinemaID,
+                    halls: {
+                      every: {
+                        id: hallID,
+                        dates: {
+                          every: {
+                            date: dateEvent,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
             include: {
               rows: true,
@@ -114,6 +144,11 @@ export const movie = new Elysia().group('/movie', (app) => {
         {
           params: t.Object({
             movieID: t.Number(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
+          }),
+          query: t.Object({
+            dateEvent: t.Date(),
           }),
         }
       )
