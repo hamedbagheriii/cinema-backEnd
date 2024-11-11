@@ -197,6 +197,69 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       )
 
       // ! ==================== Date Times ====================
-      
+
+      // ! add Time
+      .post(
+        '/dateTime/add',
+        async ({ body: { Time, date } }) => {
+          const newTime = await Prisma.dateTime.create({
+            data: {
+              Time,
+              date,
+            },
+          });
+
+          return {
+            data: newTime,
+            message: 'تایم مورد نظر اضافه شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ body: { Time, date } }) => {
+            const checkDate = await Prisma.date.findUnique({
+              where: {
+                date,
+              },
+            });
+
+            if (!checkDate) {
+              return {
+                message: 'روز مورد نظر یافت نشد !',
+                success: false,
+              };
+            }
+          },
+          body: t.Object({
+            Time: t.String(),
+            date: t.Date(),
+          }),
+        }
+      )
+
+      // ! get Times
+      .get(
+        '/dateTime/:id?',
+        async ({ params: { id } }) => {
+          let dateTimes;
+          if (id) {
+            dateTimes = await Prisma.dateTime.findMany({
+              where: { id },
+            });
+          }
+          dateTimes = await Prisma.dateTime.findMany();
+
+          return {
+            data: dateTimes,
+            message: 'تایم مورد نظر اضافه شد !',
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.Number()),
+          }),
+        }
+      )
   );
 });

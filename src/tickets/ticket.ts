@@ -7,7 +7,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
     app
       .state('checkToken', null as null | any)
 
-      // ! چک کردن توکن کاربر
+      // ! check Token validate
       .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
         const checkToken = await auth.checkToken((authorization as string) || '');
         if (checkToken !== null) {
@@ -19,17 +19,29 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         }
       })
 
-      // ! وجود توکن اجباری
+      // ! Token is mandatory
       .guard({
         headers: t.Object({
           authorization: t.String(),
         }),
       })
 
-      // ! افزودن تیکت
+      // ! add tickets
       .post(
         '/add',
-        async ({ body: { ticket, email, movieId, rows, useTicket , cinemaID , hallID , dateEvent } }) => {
+        async ({
+          body: {
+            ticket,
+            email,
+            movieId,
+            rows,
+            useTicket,
+            cinemaID,
+            hallID,
+            dateEvent,
+            Time,
+          },
+        }) => {
           const addTicket = await Prisma.sessionTicket.create({
             data: {
               ticket,
@@ -46,14 +58,15 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               },
               cinemaID,
               hallID,
-              date : dateEvent,
+              date: dateEvent,
+              Time,
             },
             include: {
               rows: true,
             },
           });
 
-          return { addTicket };
+          return { addTicket, success: true, message: 'تیکت با موفقیت افزوده شد !' };
         },
         {
           body: t.Object({
@@ -67,37 +80,105 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             cinemaID: t.Number(),
             hallID: t.Number(),
             dateEvent: t.Date(),
+            Time: t.String(),
           }),
         }
       )
 
-      // ! دریافت تیکت ها
-      .get('/', async ({ store: { checkToken } }) => {
-        const tickets = await Prisma.sessionTicket.findMany({
-          where: {
-            email: checkToken.email,
-          },
-          include: {
+      // ! get tickets
+      .get(
+        '/:ticket?',
+        async ({ store: { checkToken }, params: { ticket } }) => {
+          let tickets;
+          const include = {
             movieData: true,
             rows: true,
             cinemaData: true,
             hallData: true,
-            dateEvent: true,
-          },
-        });
+          };
 
-        // ! تبدیل صندلی های رزرو به آرایه
-        tickets.forEach((item: any) => {
-          item.rows.forEach(async (row: any) => {
-            row.selectedSeats = await arrNumberClass.stToArr(row.selectedSeats);
+          if (ticket) {
+            tickets = await Prisma.sessionTicket.findMany({
+              where: {
+                email: checkToken.email,
+                ticket: ticket,
+              },
+              include,
+            });
+          } else {
+            tickets = await Prisma.sessionTicket.findMany({
+              where: {
+                email: checkToken.email,
+              },
+              include,
+            });
+          }
+
+          // ! تبدیل صندلی های رزرو به آرایه
+          tickets.forEach((item: any) => {
+            item.rows.forEach(async (row: any) => {
+              row.selectedSeats = await arrNumberClass.stToArr(row.selectedSeats);
+            });
           });
-        });
 
-        return {
-          data: tickets,
-          success: true,
-          message: 'تیکت ها با موفقیت دریافت شدند !',
-        };
-      })
+          return {
+            data: tickets,
+            success: true,
+            message: 'تیکت ها با موفقیت دریافت شدند !',
+          };
+        },
+        {
+          params: t.Object({
+            ticket: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // ! update useTicket
+      .get(
+        '/up-useTicket/:ticket',
+        async ({ params: { ticket }, store: { checkToken } }) => {
+          const useTicket = await Prisma.sessionTicket.update({
+            where: {
+              ticket,
+              email: checkToken.email,
+            },
+            data: {
+              useTicket: true,
+            },
+          });
+
+          return {
+            message: 'تیکت با موفقیت استفاده شد .',
+            success: true,
+            useTicket,
+          };
+        },
+        {
+          beforeHandle: async ({ params: { ticket }, store: { checkToken } }) => {
+            const isTicket = await Prisma.sessionTicket.findUnique({
+              where: {
+                ticket,
+                email: checkToken.email,
+              },
+            });
+
+            if (!isTicket) {
+              return {
+                success: false,
+                message: 'تیکت معبتر نمی باشد !',
+              };
+            } else if (isTicket.useTicket) {
+              return {
+                success: false,
+                message: 'تیکت مورد نظر استفاده شده است !',
+              };
+            }
+          },
+          params: t.Object({
+            ticket: t.Number(),
+          }),
+        }
+      )
   );
 });

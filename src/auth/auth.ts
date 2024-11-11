@@ -30,7 +30,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       .state('userData', null as null | User)
       .state('checkToken', null as null | any)
 
-      // ! چک کردن وجود کاربر و رمز عبور
+      // ! check User validate
       .onBeforeHandle(async ({ body, store, path }) => {
         if (path === '/auth/sign-in' || path === '/auth/sign-up') {
           const bodyType = body as { email: string; password: string };
@@ -48,7 +48,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       })
 
-      // ! چک کردن توکن کاربر
+      // ! check Token validate
       .onBeforeHandle(async ({ headers: { authorization }, store }) => {
         const checkToken = await auth.checkToken((authorization as string) || '');
         if (checkToken !== null) {
@@ -58,7 +58,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       })
 
-      // ! ثبت نام کاربر
+      // ! sign up
       .post(
         'sign-up',
         async ({ body: { email, password, fristName, lastName } }) => {
@@ -88,7 +88,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       )
 
-      // ! ورود کاربر
+      // ! sign in
       .post(
         'sign-in',
         async ({ store: { userData } }) => {
@@ -141,7 +141,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       )
 
-      // ! وجود توکن اجباری
+      // ! Token is mandatory
       .guard({
         headers: t.Object({
           authorization: t.String(),
@@ -154,7 +154,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       })
 
-      // ! یافتن کاربر
+      // ! get User
       .get('user', async ({ store: { checkToken } }) => {
         return {
           message: 'کاربر با موفقیت یافت شد !',
@@ -163,7 +163,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         };
       })
 
-      // ! خروج کاربر
+      // ! logout User
       .get('logout', async ({ store: { checkToken } }) => {
         await Prisma.sessionToken.deleteMany({
           where: {
@@ -174,7 +174,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         return { message: 'کاربر با موفقیت خارج شد !', success: true };
       })
 
-      // ! ویرایش کاربر
+      // ! update User
       .put(
         'update',
         async ({ body: { email, fristName, lastName }, store: { checkToken } }) => {
@@ -200,7 +200,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       )
 
-      // ! ویرایش رمز عبور کاربر
+      // ! update User password
       .put(
         'update/password',
         async ({ body: { u_password }, store: { checkToken } }) => {

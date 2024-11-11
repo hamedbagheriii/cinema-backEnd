@@ -1,6 +1,6 @@
 import Elysia, { t } from 'elysia';
 import { Prisma } from '../auth/auth';
-import { stToArrClass } from '../tickets/stToArr';
+import { stToArrClass } from '../utils/stToArr';
 
 // ! dependencies
 export const arrNumberClass = new stToArrClass();
@@ -9,7 +9,7 @@ export const movie = new Elysia().group('/movie', (app) => {
   return (
     app
 
-      // ! افزودن فیلم
+      // ! add Movie
       .post(
         '/add',
         async ({ body: { movieName, decription, time, price, createdAt, cinemaID } }) => {
@@ -20,8 +20,8 @@ export const movie = new Elysia().group('/movie', (app) => {
               time,
               createdAt,
               price,
-              cinemaID : cinemaID || null,
-            }
+              cinemaID: cinemaID || null,
+            },
           });
 
           return {
@@ -56,7 +56,7 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
-      // ! دریافت فیلم ها
+      // ! get Movies
       .get(
         '/:id?',
         async ({ params: { id } }) => {
@@ -89,50 +89,50 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
-    // ! دریافت صندلی های رزرو شده
-    .get(
-      '/resarvedSeats/:movieID/:cinemaID/:hallID',
-      async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
-        // ! دریافت تیکت های مربوط به فیلم
-        const getAllTicket = await Prisma.sessionTicket.findMany({
-          where: {
-            movieId: movieID,
-            cinemaID,
-            hallID,
-            date : dateEvent
-          },
-          include: {
-            rows: true,
-          },
-        });
+      // !  get resarved seats
+      .get(
+        '/resarvedSeats/:movieID/:cinemaID/:hallID',
+        async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
+          // ! دریافت تیکت های مربوط به فیلم
+          const getAllTicket = await Prisma.sessionTicket.findMany({
+            where: {
+              movieId: movieID,
+              cinemaID,
+              hallID,
+              date: dateEvent,
+            },
+            include: {
+              rows: true,
+            },
+          });
 
-        // ! تبدیل صندلی های رزرو به آرایه
-        let allSeats: any[] = [];
-        getAllTicket.forEach((item: any) => {
-          item.rows.forEach(async (row: any) => {
-            allSeats.push({
-              row: row.row,
-              selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
+          // ! تبدیل صندلی های رزرو به آرایه
+          let allSeats: any[] = [];
+          getAllTicket.forEach((item: any) => {
+            item.rows.forEach(async (row: any) => {
+              allSeats.push({
+                row: row.row,
+                selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
+              });
             });
           });
-        });
 
-        return {
-          data: allSeats,
-          success: true,
-          message: 'صندلی های رزرو با موفقیت دریافت شدند !',
-        };
-      },
-      {
-        params: t.Object({
-          movieID: t.Number(),
-          cinemaID: t.Number(),
-          hallID: t.Number(),
-        }),
-        query: t.Object({
-          dateEvent: t.Date(),
-        }),
-      }
-    )
+          return {
+            data: allSeats,
+            success: true,
+            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
+          };
+        },
+        {
+          params: t.Object({
+            movieID: t.Number(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
+          }),
+          query: t.Object({
+            dateEvent: t.Date(),
+          }),
+        }
+      )
   );
 });
