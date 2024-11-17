@@ -1,6 +1,7 @@
 import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { arrNumberClass } from '../movie/movie';
+import { wallets } from '../wallet/wallet';
 
 export const ticket = new Elysia().group('/ticket', (app) => {
   return (
@@ -40,7 +41,9 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             hallID,
             dateEvent,
             Time,
+            price
           },
+          store : {checkToken}
         }) => {
           const addTicket = await Prisma.sessionTicket.create({
             data: {
@@ -60,15 +63,45 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               hallID,
               date: dateEvent,
               Time,
+              price,
             },
             include: {
               rows: true,
             },
           });
 
+          // ! decrement user wallet amount
+          const walletDec =  await Prisma.wallet.update({
+            where : {
+              email : checkToken.userData.email
+            },
+            data : {
+              Amount : {
+                decrement : price
+              }
+            }
+          })
+          
+
           return { addTicket, success: true, message: 'تیکت با موفقیت افزوده شد !' };
         },
         {
+          beforeHandle : async ({store : {checkToken} , body : {price} , set})=>{
+            const WalletData : any = await Prisma.wallet.findUnique({
+              where : {
+                email : checkToken.userData.email
+              }
+            });
+
+
+            if(WalletData.Amount < price){
+              set.status = 400;
+              return {
+                message : 'مبلغ موجودی کیف پول شما کافی نمیباشد .',
+                success : false,
+              }
+            }
+          },
           body: t.Object({
             ticket: t.Number(),
             email: t.String(),
@@ -81,6 +114,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             hallID: t.Number(),
             dateEvent: t.Date(),
             Time: t.String(),
+            price : t.Number()
           }),
         }
       )

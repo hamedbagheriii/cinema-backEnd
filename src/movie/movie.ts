@@ -49,7 +49,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             movieName: t.String(),
             decription: t.String(),
             time: t.String(),
-            price: t.String(),
+            price: t.Number(),
             createdAt: t.String(),
             cinemaID: t.Optional(t.Number()),
           }),

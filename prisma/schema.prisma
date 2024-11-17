@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 // ! ----- MODELS FOR USER ----- !
 
 model User {
@@ -18,6 +17,14 @@ model User {
   password  String
   token     sessionToken[]
   tickets   sessionTicket[]
+  wallet    Wallet[]
+}
+
+model Wallet {
+  id       String @id @default(cuid())
+  userData User   @relation(fields: [email], references: [email])
+  email    String @unique
+  Amount   Int    @default(0)
 }
 
 model sessionToken {
@@ -29,13 +36,12 @@ model sessionToken {
 
 // ! ----- MODELS FOR MOVIES ----- !
 
-
 model Movies {
   id         Int             @id @unique @default(autoincrement())
   movieName  String          @unique
   decription String
   time       String
-  price      String
+  price      Int
   createdAt  String
   Tickets    sessionTicket[]
   cinemaData cinema?         @relation(fields: [cinemaID], references: [id])
@@ -49,7 +55,6 @@ model row {
   tickets       sessionTicket @relation(fields: [ticket], references: [ticket])
   ticket        Int
 }
-
 
 // ! ----- MODELS FOR TICKETS ----- !
 
@@ -69,6 +74,7 @@ model sessionTicket {
   date       DateTime
   dateTime   dateTime @relation(fields: [Time], references: [Time])
   Time       String
+  price      Int
 }
 
 // ! ----- MODELS FOR CINEMA ----- !

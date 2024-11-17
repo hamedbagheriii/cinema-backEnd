@@ -1,4 +1,4 @@
-import { PrismaClient, sessionToken, User } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
 
@@ -68,7 +68,10 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               lastName,
               fristName,
               password: await Bun.password.hash(password),
-            },
+              wallet : {
+                create : {}
+              }
+            }
           });
 
           return {
@@ -118,13 +121,14 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         },
         {
           beforeHandle: async ({ store: { userData, isUser }, set }) => {
-            set.status = 401;
             if (!isUser) {
+              set.status = 401;
               return {
-                message: 'کاربر وجود ندارد !',
+                message: 'این حساب کاربری وجود ندارد !',
                 success: false,
               };
             } else if (userData == null) {
+              set.status = 401;
               return {
                 message: 'ایمیل یا رمز عبور اشتباه است !',
                 success: false,
@@ -177,7 +181,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       // ! update User
       .put(
         'update',
-        async ({ body: { email, fristName, lastName }, store: { checkToken } }) => {
+        async ({ body: { fristName, lastName }, store: { checkToken } }) => {
           // ! تغیر ایمیل کاربر امکان پذیر نیست زیرا یونیک است
           const user = await Prisma.user.update({
             where: {
@@ -196,7 +200,16 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
         },
         {
-          body,
+          body :  t.Object({
+            fristName: t.String({
+              minLength: 2,
+              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+            }),
+            lastName: t.String({
+              minLength: 3,
+              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
+            }),
+          })
         }
       )
 
@@ -228,7 +241,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
 
             if (!checkPassword) {
               set.status = 401;
-              return { message: 'رمز عبور اشتباه است !', success: false };
+              return { message: 'رمز عبور فعلی اشتباه است !', success: false };
             }
           },
           body: t.Object({
