@@ -213,16 +213,18 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         }
       )
 
-      // ! update User password
+      // ! update User and password
       .put(
         'update/password',
-        async ({ body: { u_password }, store: { checkToken } }) => {
+        async ({ body: { u_password , lastName, fristName }, store: { checkToken } }) => {
           const user = await Prisma.user.update({
             where: {
               id: checkToken.userId,
             },
             data: {
               password: await Bun.password.hash(u_password),
+              fristName,
+              lastName
             },
           });
 
@@ -252,6 +254,14 @@ export const userPanel = new Elysia().group('/auth', (app) => {
             o_password: t.String({
               minLength: 6,
               error: 'رمز عبور فعلی حداقل 6 کاراکتر باید باشد !',
+            }),
+            fristName: t.String({
+              minLength: 2,
+              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+            }),
+            lastName: t.String({
+              minLength: 3,
+              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
             }),
           }),
         }
