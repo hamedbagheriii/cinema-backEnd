@@ -1,5 +1,6 @@
 import Elysia, { t } from 'elysia';
 import { Prisma } from '../auth/auth';
+import { imgAwcClass } from '../imageAWS/upIMG';
 
 export const cinema = new Elysia().group('/cinema', (app) => {
   return (
@@ -8,7 +9,16 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! add cinema
       .post(
         '/add',
-        async ({ body: { cinemaName, address, city, province, movies } }) => {
+        async ({ body: { cinemaName, address, city, province, movies, image }, set }) => {
+          //  upload image to s3 =>
+          const movieIMG = await imgAwcClass.uploadImage(image, 'cinemaIMG');
+          if (!movieIMG.success) {
+            set.status = 400;
+            return {
+              ...movieIMG,
+            };
+          }
+
           const cinema = await Prisma.cinema.create({
             data: {
               cinemaName,
@@ -18,9 +28,16 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               movies: {
                 connect: movies.map((movie: number) => ({ id: movie })),
               },
+              image: {
+                create: {
+                  name: cinemaName,
+                  url: movieIMG.fileUrl || '',
+                },
+              },
             },
             include: {
               movies: true,
+              image: true,
             },
           });
 
@@ -31,12 +48,23 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
+          beforeHandle: async ({ body: { image }, set }) => {
+            // check image =>
+            if (!image) {
+              set.status = 400;
+              return {
+                success: false,
+                message: 'عکس انتخاب نشده است !',
+              };
+            }
+          },
           body: t.Object({
             cinemaName: t.String(),
             address: t.String(),
             city: t.String(),
             province: t.String(),
             movies: t.Array(t.Number()),
+            image: t.File(),
           }),
         }
       )
@@ -54,6 +82,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               include: {
                 halls: true,
                 movies: true,
+                image : true
               },
             });
           } else {
@@ -61,6 +90,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               include: {
                 halls: true,
                 movies: true,
+                image : true
               },
             });
           }

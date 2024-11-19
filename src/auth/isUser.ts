@@ -23,6 +23,8 @@ export class authClass {
         userData: {
           include: {
             tickets: true,
+            wallet : true,
+            token : true
           },
         },
       },

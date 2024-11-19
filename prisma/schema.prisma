@@ -46,6 +46,7 @@ model Movies {
   Tickets    sessionTicket[]
   cinemaData cinema?         @relation(fields: [cinemaID], references: [id])
   cinemaID   Int?
+  image       Images[]
 }
 
 model row {
@@ -89,6 +90,7 @@ model cinema {
   movies     Movies[]
   tickets    sessionTicket[]
   dates      date[]
+  image       Images[]
 }
 
 model Hall {
@@ -115,4 +117,17 @@ model dateTime {
   dateData date            @relation(fields: [date], references: [date])
   date     DateTime
   tickets  sessionTicket[]
+}
+
+// ! ----- MODELS FOR IMAGES ----- !
+
+model Images {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  url       String
+  createdAt DateTime? @default(now())
+  movieData Movies? @relation(fields: [movieId], references: [id])
+  movieId   Int?
+  cinemaData cinema? @relation(fields: [cinemaID], references: [id])
+  cinemaID  Int?
 }

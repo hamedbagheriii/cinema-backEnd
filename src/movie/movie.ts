@@ -1,6 +1,7 @@
 import Elysia, { t } from 'elysia';
 import { Prisma } from '../auth/auth';
 import { stToArrClass } from '../utils/stToArr';
+import { imgAwcClass } from '../imageAWS/upIMG';
 
 // ! dependencies
 export const arrNumberClass = new stToArrClass();
@@ -12,7 +13,16 @@ export const movie = new Elysia().group('/movie', (app) => {
       // ! add Movie
       .post(
         '/add',
-        async ({ body: { movieName, decription, time, price, createdAt, cinemaID } }) => {
+        async ({ body: { movieName, decription, time, price, createdAt, cinemaID , image } , set }) => {
+          //  upload image to s3 =>
+          const movieIMG = await imgAwcClass.uploadImage(image , 'movieIMG');
+          if (!movieIMG.success) {
+            set.status = 400;
+            return {
+              ...movieIMG
+            };
+          }
+
           const movie = await Prisma.movies.create({
             data: {
               decription,
@@ -21,7 +31,16 @@ export const movie = new Elysia().group('/movie', (app) => {
               createdAt,
               price,
               cinemaID: cinemaID || null,
+              image : {
+                create : {
+                  name : movieName,
+                  url : movieIMG.fileUrl || '',
+                }
+              },
             },
+            include : {
+              image : true
+            }
           });
 
           return {
@@ -31,7 +50,17 @@ export const movie = new Elysia().group('/movie', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { movieName }, set }) => {
+          beforeHandle: async ({ body: { movieName , image }, set }) => {
+            // check image =>
+            if (!image) {
+              set.status = 400;
+              return {
+                success : false,
+                message: 'عکس انتخاب نشده است !',
+              };
+            }
+
+            // check movie =>
             const checkMovie = await Prisma.movies.findUnique({
               where: {
                 movieName,
@@ -52,6 +81,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             price: t.Number(),
             createdAt: t.String(),
             cinemaID: t.Optional(t.Number()),
+            image : t.File()
           }),
         }
       )
@@ -72,6 +102,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             movies = await Prisma.movies.findMany({
               include: {
                 cinemaData: true,
+                image : true
               },
             });
           }

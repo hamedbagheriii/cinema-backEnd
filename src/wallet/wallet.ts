@@ -57,7 +57,7 @@ export const wallets = new Elysia().group('/wallet', (app) => {
           });
 
           return {
-            message: 'کیف پول با موفقیت افزایش یافت . !',
+            message: 'موجودی کیف پول با موفقیت افزایش یافت  . ',
             wallet,
             success: true,
           };
