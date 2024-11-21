@@ -35,6 +35,15 @@ model sessionToken {
 }
 
 // ! ----- MODELS FOR MOVIES ----- !
+model MovieCinema {
+  id       String  @unique @default(cuid())
+  cinema   cinema @relation(fields: [cinemaID], references: [id])
+  movie    Movies @relation(fields: [movieId], references: [id])
+  movieId  Int
+  cinemaID Int
+
+  @@id([movieId, cinemaID]) 
+}
 
 model Movies {
   id         Int             @id @unique @default(autoincrement())
@@ -44,8 +53,7 @@ model Movies {
   price      Int
   createdAt  String
   Tickets    sessionTicket[]
-  cinemaData cinema?         @relation(fields: [cinemaID], references: [id])
-  cinemaID   Int?
+  cinemaData MovieCinema[]
   image       Images[]
 }
 
@@ -87,7 +95,7 @@ model cinema {
   city       String
   province   String
   halls      Hall[]
-  movies     Movies[]
+  movies     MovieCinema[] 
   tickets    sessionTicket[]
   dates      date[]
   image       Images[]

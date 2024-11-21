@@ -9,7 +9,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! add cinema
       .post(
         '/add',
-        async ({ body: { cinemaName, address, city, province, movies, image }, set }) => {
+        async ({ body: { cinemaName, address, city, province, image }, set }) => {
           //  upload image to s3 =>
           const movieIMG = await imgAwcClass.uploadImage(image, 'cinemaIMG');
           if (!movieIMG.success) {
@@ -25,9 +25,6 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               address,
               city,
               province,
-              movies: {
-                connect: movies.map((movie: number) => ({ id: movie })),
-              },
               image: {
                 create: {
                   name: cinemaName,
@@ -63,7 +60,6 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             address: t.String(),
             city: t.String(),
             province: t.String(),
-            movies: t.Array(t.Number()),
             image: t.File(),
           }),
         }
@@ -81,8 +77,13 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               },
               include: {
                 halls: true,
-                movies: true,
-                image : true
+                movies: {
+                  include : {
+                    movie : true
+                  }
+                },
+                image: true,
+                dates: true,
               },
             });
           } else {
@@ -90,7 +91,8 @@ export const cinema = new Elysia().group('/cinema', (app) => {
               include: {
                 halls: true,
                 movies: true,
-                image : true
+                image: true,
+                dates: true,
               },
             });
           }
@@ -108,6 +110,30 @@ export const cinema = new Elysia().group('/cinema', (app) => {
         }
       )
 
+      // ! add movies to cinema
+      .post(
+        '/UPMovies/:id',
+        async ({ params: { id }, body: { movies } }) => {
+            const res = await Prisma.movieCinema.createMany({
+              data :  movies.map((movie: number) => ({ movieId: movie, cinemaID: id }))
+            })
+           
+
+          return {
+            res,
+            message: 'افزودن فیلم به سینما با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Number(),
+          }),
+          body: t.Object({
+            movies: t.Array(t.Number()),
+          }),
+        }
+      )
       // ! ==================== Halls ====================
 
       // ! add halls
@@ -174,57 +200,57 @@ export const cinema = new Elysia().group('/cinema', (app) => {
 
       // ! ==================== Dates ====================
 
-      // ! add dates
-      .post(
-        '/dates/add',
-        async ({ body: { date, cinemaID } }) => {
-          const dateRecord = await Prisma.date.create({
-            data: {
-              date,
-              cinemaID,
-            },
-          });
+      // // ! add dates
+      // .post(
+      //   '/dates/add',
+      //   async ({ body: { date, cinemaID } }) => {
+      //     const dateRecord = await Prisma.date.create({
+      //       data: {
+      //         date,
+      //         cinemaID,
+      //       },
+      //     });
 
-          return {
-            data: dateRecord,
-            message: 'افزودن تاریخ با موفقیت انجام شد !',
-            success: true,
-          };
-        },
-        {
-          body: t.Object({
-            date: t.Date(),
-            cinemaID: t.Number(),
-          }),
-        }
-      )
+      //     return {
+      //       data: dateRecord,
+      //       message: 'افزودن تاریخ با موفقیت انجام شد !',
+      //       success: true,
+      //     };
+      //   },
+      //   {
+      //     body: t.Object({
+      //       date: t.Date(),
+      //       cinemaID: t.Number(),
+      //     }),
+      //   }
+      // )
 
-      // ! get dates
-      .get(
-        '/dates',
-        async ({ query: { cinemaID } }) => {
-          const dates = await Prisma.date.findMany({
-            where: {
-              cinemaID,
-            },
-            include: {
-              dateTimes: true,
-              cinemaData: true,
-            },
-          });
+      // // ! get dates
+      // .get(
+      //   '/dates',
+      //   async ({ query: { cinemaID } }) => {
+      //     const dates = await Prisma.date.findMany({
+      //       where: {
+      //         cinemaID,
+      //       },
+      //       include: {
+      //         dateTimes: true,
+      //         cinemaData: true,
+      //       },
+      //     });
 
-          return {
-            data: dates,
-            message: 'دریافت تاریخ ها با موفقیت انجام شد !',
-            success: true,
-          };
-        },
-        {
-          query: t.Object({
-            cinemaID: t.Number(),
-          }),
-        }
-      )
+      //     return {
+      //       data: dates,
+      //       message: 'دریافت تاریخ ها با موفقیت انجام شد !',
+      //       success: true,
+      //     };
+      //   },
+      //   {
+      //     query: t.Object({
+      //       cinemaID: t.Number(),
+      //     }),
+      //   }
+      // )
 
       // ! ==================== Date Times ====================
 

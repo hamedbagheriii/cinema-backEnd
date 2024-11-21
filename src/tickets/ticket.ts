@@ -86,13 +86,17 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           return { addTicket, success: true, message: 'تیکت با موفقیت افزوده شد !' };
         },
         {
-          beforeHandle : async ({store : {checkToken} , body : {price} , set})=>{
+          beforeHandle : async ({store : {checkToken} , body : {price , dateEvent , cinemaID} , set})=>{
             const WalletData : any = await Prisma.wallet.findUnique({
               where : {
                 email : checkToken.userData.email
               }
             });
-
+            const date = await Prisma.date.findUnique({
+              where : {
+                date : dateEvent
+              }
+            });
 
             if(WalletData.Amount < price){
               set.status = 400;
@@ -100,6 +104,16 @@ export const ticket = new Elysia().group('/ticket', (app) => {
                 message : 'مبلغ موجودی کیف پول شما کافی نمیباشد .',
                 success : false,
               }
+            }
+            console.log(date);
+            
+            if (!date) {
+              const newDate = await Prisma.date.create({
+                data : {
+                  date : dateEvent,
+                  cinemaID
+                }
+              })
             }
           },
           body: t.Object({

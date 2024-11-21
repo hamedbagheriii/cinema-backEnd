@@ -13,13 +13,16 @@ export const movie = new Elysia().group('/movie', (app) => {
       // ! add Movie
       .post(
         '/add',
-        async ({ body: { movieName, decription, time, price, createdAt, cinemaID , image } , set }) => {
+        async ({
+          body: { movieName, decription, time, price, createdAt, image },
+          set,
+        }) => {
           //  upload image to s3 =>
-          const movieIMG = await imgAwcClass.uploadImage(image , 'movieIMG');
+          const movieIMG = await imgAwcClass.uploadImage(image, 'movieIMG');
           if (!movieIMG.success) {
             set.status = 400;
             return {
-              ...movieIMG
+              ...movieIMG,
             };
           }
 
@@ -29,18 +32,17 @@ export const movie = new Elysia().group('/movie', (app) => {
               movieName,
               time,
               createdAt,
-              price,
-              cinemaID: cinemaID || null,
-              image : {
-                create : {
-                  name : movieName,
-                  url : movieIMG.fileUrl || '',
-                }
+              price: Number(price),
+              image: {
+                create: {
+                  name: movieName,
+                  url: movieIMG.fileUrl || '',
+                },
               },
             },
-            include : {
-              image : true
-            }
+            include: {
+              image: true,
+            },
           });
 
           return {
@@ -50,12 +52,12 @@ export const movie = new Elysia().group('/movie', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { movieName , image }, set }) => {
+          beforeHandle: async ({ body: { movieName, image }, set }) => {
             // check image =>
             if (!image) {
               set.status = 400;
               return {
-                success : false,
+                success: false,
                 message: 'عکس انتخاب نشده است !',
               };
             }
@@ -78,10 +80,9 @@ export const movie = new Elysia().group('/movie', (app) => {
             movieName: t.String(),
             decription: t.String(),
             time: t.String(),
-            price: t.Number(),
+            price: t.String(),
             createdAt: t.String(),
-            cinemaID: t.Optional(t.Number()),
-            image : t.File()
+            image: t.File(),
           }),
         }
       )
@@ -102,14 +103,14 @@ export const movie = new Elysia().group('/movie', (app) => {
             movies = await Prisma.movies.findMany({
               include: {
                 cinemaData: true,
-                image : true
+                image: true,
               },
             });
           }
 
           return {
             message: `فیلم ها با موفقیت دریافت شدند .`,
-            data: { ...movies },
+            data: movies,
             success: true,
           };
         },
@@ -163,6 +164,70 @@ export const movie = new Elysia().group('/movie', (app) => {
           query: t.Object({
             dateEvent: t.Date(),
           }),
+        }
+      )
+
+      // ! ==================== slider ====================
+
+      // ! add image for slider
+      .post(
+        '/slider/add',
+        async ({ body: { movieName, image }, set }) => {
+          //  upload image to s3 =>
+          const movieIMG = await imgAwcClass.uploadImage(image, 'movieIMG');
+          if (!movieIMG.success) {
+            set.status = 400;
+            return {
+              ...movieIMG,
+            };
+          }
+
+          const sliderIMG = await Prisma.images.create({
+            data: {
+              name: movieName,
+              url: movieIMG.fileUrl || '',
+            },
+          });
+
+          return {
+            data: sliderIMG,
+            message: 'عکس با موفقیت اضافه شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ body: { movieName, image }, set }) => {
+            // check image =>
+            if (!image) {
+              set.status = 400;
+              return {
+                success: false,
+                message: 'عکس انتخاب نشده است !',
+              };
+            }
+          },
+          body: t.Object({
+            movieName: t.String(),
+            image: t.File(),
+          }),
+        }
+      )
+
+      // ! get image for slider
+      .get(
+        '/slider',
+        async () => {
+          const sliderIMG = await Prisma.images.findMany({
+            where : {
+              movieId : null,
+              cinemaID : null,
+            }
+          });
+          return {
+            data: sliderIMG,
+            message: 'عکس با موفقیت دریافت شد !',
+            success: true,
+          };
         }
       )
   );
