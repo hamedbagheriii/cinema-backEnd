@@ -79,7 +79,11 @@ export const cinema = new Elysia().group('/cinema', (app) => {
                 halls: true,
                 movies: {
                   include : {
-                    movie : true
+                    movie : {
+                      include : {
+                        image : true
+                      }
+                    }
                   }
                 },
                 image: true,

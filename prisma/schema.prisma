@@ -81,7 +81,6 @@ model sessionTicket {
   hallID     Int
   dateEvent  date     @relation(fields: [date], references: [date])
   date       DateTime
-  dateTime   dateTime @relation(fields: [Time], references: [Time])
   Time       String
   price      Int
 }
@@ -116,16 +115,8 @@ model date {
   cinemaData cinema          @relation(fields: [cinemaID], references: [id])
   cinemaID   Int
   tickets    sessionTicket[]
-  dateTimes  dateTime[]
 }
 
-model dateTime {
-  id       Int             @id @default(autoincrement())
-  Time     String          @unique
-  dateData date            @relation(fields: [date], references: [date])
-  date     DateTime
-  tickets  sessionTicket[]
-}
 
 // ! ----- MODELS FOR IMAGES ----- !
 

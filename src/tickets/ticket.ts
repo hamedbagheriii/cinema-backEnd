@@ -41,9 +41,9 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             hallID,
             dateEvent,
             Time,
-            price
+            price,
           },
-          store : {checkToken}
+          store: { checkToken },
         }) => {
           const addTicket = await Prisma.sessionTicket.create({
             data: {
@@ -71,49 +71,52 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           });
 
           // ! decrement user wallet amount
-          const walletDec =  await Prisma.wallet.update({
-            where : {
-              email : checkToken.userData.email
+          const walletDec = await Prisma.wallet.update({
+            where: {
+              email: checkToken.userData.email,
             },
-            data : {
-              Amount : {
-                decrement : price
-              }
-            }
-          })
-          
+            data: {
+              Amount: {
+                decrement: price,
+              },
+            },
+          });
 
           return { addTicket, success: true, message: 'تیکت با موفقیت افزوده شد !' };
         },
         {
-          beforeHandle : async ({store : {checkToken} , body : {price , dateEvent , cinemaID} , set})=>{
-            const WalletData : any = await Prisma.wallet.findUnique({
-              where : {
-                email : checkToken.userData.email
-              }
+          beforeHandle: async ({
+            store: { checkToken },
+            body: { price, dateEvent, cinemaID },
+            set,
+          }) => {
+            const WalletData: any = await Prisma.wallet.findUnique({
+              where: {
+                email: checkToken.userData.email,
+              },
             });
             const date = await Prisma.date.findUnique({
-              where : {
-                date : dateEvent
-              }
+              where: {
+                date: dateEvent,
+              },
             });
+            if (!date) {
+              const newDate = await Prisma.date
+                .create({
+                  data: {
+                    date: dateEvent,
+                    cinemaID,
+                  },
+                })
+            }
 
-            if(WalletData.Amount < price){
+
+            if (WalletData.Amount < price) {
               set.status = 400;
               return {
-                message : 'مبلغ موجودی کیف پول شما کافی نمیباشد .',
-                success : false,
-              }
-            }
-            console.log(date);
-            
-            if (!date) {
-              const newDate = await Prisma.date.create({
-                data : {
-                  date : dateEvent,
-                  cinemaID
-                }
-              })
+                message: 'مبلغ موجودی کیف پول شما کافی نمیباشد .',
+                success: false,
+              };
             }
           },
           body: t.Object({
@@ -128,7 +131,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             hallID: t.Number(),
             dateEvent: t.Date(),
             Time: t.String(),
-            price : t.Number()
+            price: t.Number(),
           }),
         }
       )
@@ -203,7 +206,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           };
         },
         {
-          beforeHandle: async ({ params: { ticket }, store: { checkToken } }) => {
+          beforeHandle: async ({ params: { ticket }, store: { checkToken } ,set}) => {
             const isTicket = await Prisma.sessionTicket.findUnique({
               where: {
                 ticket,
@@ -212,11 +215,13 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             });
 
             if (!isTicket) {
+              set.status = 404;
               return {
                 success: false,
                 message: 'تیکت معبتر نمی باشد !',
               };
             } else if (isTicket.useTicket) {
+              set.status = 403;
               return {
                 success: false,
                 message: 'تیکت مورد نظر استفاده شده است !',

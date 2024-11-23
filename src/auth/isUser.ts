@@ -22,7 +22,14 @@ export class authClass {
       include: {
         userData: {
           include: {
-            tickets: true,
+            tickets: {
+              include : {
+                movieData: true,
+                rows: true,
+                cinemaData: true,
+                hallData: true,
+              }
+            },
             wallet : true,
             token : true
           },

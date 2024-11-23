@@ -96,13 +96,32 @@ export const movie = new Elysia().group('/movie', (app) => {
             movies = await Prisma.movies.findUnique({
               where: { id },
               include: {
-                cinemaData: true,
+                cinemaData: {
+                  include : {
+                    cinema : {
+                      include : {
+                        halls : true,
+                        image : true,
+                      }
+                    }
+                  }
+                },
+                image: true,
               },
             });
           } else {
             movies = await Prisma.movies.findMany({
               include: {
-                cinemaData: true,
+                cinemaData: {
+                  include : {
+                    cinema : {
+                      include : {
+                        halls : true,
+                        image : true,
+                      }
+                    }
+                  }
+                },
                 image: true,
               },
             });
@@ -123,8 +142,8 @@ export const movie = new Elysia().group('/movie', (app) => {
 
       // !  get resarved seats
       .get(
-        '/resarvedSeats/:movieID/:cinemaID/:hallID',
-        async ({ params: { movieID, cinemaID, hallID }, query: { dateEvent } }) => {
+        '/resarvedSeats/:movieID/:cinemaID/:hallID/:dateEvent/:Time',
+        async ({ params: { movieID, cinemaID, hallID,dateEvent,Time }}) => {
           // ! دریافت تیکت های مربوط به فیلم
           const getAllTicket = await Prisma.sessionTicket.findMany({
             where: {
@@ -132,6 +151,7 @@ export const movie = new Elysia().group('/movie', (app) => {
               cinemaID,
               hallID,
               date: dateEvent,
+              Time
             },
             include: {
               rows: true,
@@ -160,9 +180,8 @@ export const movie = new Elysia().group('/movie', (app) => {
             movieID: t.Number(),
             cinemaID: t.Number(),
             hallID: t.Number(),
-          }),
-          query: t.Object({
             dateEvent: t.Date(),
+            Time : t.String()
           }),
         }
       )
