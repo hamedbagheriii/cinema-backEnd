@@ -145,7 +145,7 @@ export const movie = new Elysia().group('/movie', (app) => {
         '/resarvedSeats/:movieID/:cinemaID/:hallID/:dateEvent/:Time',
         async ({ params: { movieID, cinemaID, hallID,dateEvent,Time }}) => {
           // ! دریافت تیکت های مربوط به فیلم
-          const getAllTicket = await Prisma.sessionTicket.findMany({
+          const getAllTicket = await Prisma.sessionticket.findMany({
             where: {
               movieId: movieID,
               cinemaID,

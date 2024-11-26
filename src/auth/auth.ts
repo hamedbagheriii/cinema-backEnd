@@ -1,4 +1,4 @@
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, user } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
 
@@ -27,7 +27,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
   return (
     app
       .state('isUser', false)
-      .state('userData', null as null | User)
+      .state('userData', null as null | user)
       .state('checkToken', null as null | any)
 
       // ! check User validate
@@ -95,7 +95,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       .post(
         'sign-in',
         async ({ store: { userData } }) => {
-          return await Prisma.sessionToken
+          return await Prisma.sessiontoken
             .deleteMany({
               where: {
                 userId: userData?.id,
@@ -105,7 +105,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               const key = crypto.randomUUID();
               const token = key;
 
-              await Prisma.sessionToken.create({
+              await Prisma.sessiontoken.create({
                 data: {
                   token,
                   userId: userData?.id || '',
@@ -169,7 +169,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
 
       // ! logout User
       .get('logout', async ({ store: { checkToken } }) => {
-        await Prisma.sessionToken.deleteMany({
+        await Prisma.sessiontoken.deleteMany({
           where: {
             token: checkToken.token,
           },

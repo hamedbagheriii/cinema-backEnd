@@ -15,7 +15,7 @@ export class authClass {
   }
 
   async checkToken(token: string) {
-    return await Prisma.sessionToken.findUnique({
+    return await Prisma.sessiontoken.findUnique({
       where: {
         token,
       },

@@ -45,7 +45,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           },
           store: { checkToken },
         }) => {
-          const addTicket = await Prisma.sessionTicket.create({
+          const addTicket = await Prisma.sessionticket.create({
             data: {
               ticket,
               email,
@@ -149,7 +149,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           };
 
           if (ticket) {
-            tickets = await Prisma.sessionTicket.findMany({
+            tickets = await Prisma.sessionticket.findMany({
               where: {
                 email: checkToken.email,
                 ticket: ticket,
@@ -157,7 +157,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               include,
             });
           } else {
-            tickets = await Prisma.sessionTicket.findMany({
+            tickets = await Prisma.sessionticket.findMany({
               where: {
                 email: checkToken.email,
               },
@@ -189,7 +189,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
       .get(
         '/up-useTicket/:ticket',
         async ({ params: { ticket }, store: { checkToken } }) => {
-          const useTicket = await Prisma.sessionTicket.update({
+          const useTicket = await Prisma.sessionticket.update({
             where: {
               ticket,
               email: checkToken.email,
@@ -207,7 +207,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         },
         {
           beforeHandle: async ({ params: { ticket }, store: { checkToken } ,set}) => {
-            const isTicket = await Prisma.sessionTicket.findUnique({
+            const isTicket = await Prisma.sessionticket.findUnique({
               where: {
                 ticket,
                 email: checkToken.email,

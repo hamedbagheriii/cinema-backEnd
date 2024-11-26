@@ -17,8 +17,8 @@ model user {
   fristName String
   lastName  String
   password  String
-  token     sessionToken[]
-  tickets   sessionTicket[]
+  token     sessiontoken[]
+  tickets   sessionticket[]
   wallet    wallet[]
 }
 
@@ -29,7 +29,7 @@ model wallet {
   Amount   Int    @default(0)
 }
 
-model sessionToken {
+model sessiontoken {
   id       Int    @id @default(autoincrement())
   token    String @unique
   userData user   @relation(fields: [userId], references: [id])
@@ -37,7 +37,7 @@ model sessionToken {
 }
 
 // ! ----- MODELS FOR MOVIES ----- !
-model movieCinema {
+model moviecinema {
   id       String  @unique @default(cuid())
   cinema   cinema @relation(fields: [cinemaID], references: [id])
   movie    movies @relation(fields: [movieId], references: [id])
@@ -54,8 +54,8 @@ model movies {
   time       String
   price      Int
   createdAt  String
-  Tickets    sessionTicket[]
-  cinemaData movieCinema[]
+  Tickets    sessionticket[]
+  cinemaData moviecinema[]
   image       images[]
 }
 
@@ -63,13 +63,13 @@ model row {
   id            Int           @unique @default(autoincrement())
   row           Int
   selectedSeats String
-  tickets       sessionTicket @relation(fields: [ticket], references: [ticket])
+  tickets       sessionticket @relation(fields: [ticket], references: [ticket])
   ticket        Int
 }
 
 // ! ----- MODELS FOR TICKETS ----- !
 
-model sessionTicket {
+model sessionticket {
   ticket     Int      @unique
   userData   user     @relation(fields: [email], references: [email])
   email      String
@@ -96,8 +96,8 @@ model cinema {
   city       String
   province   String
   halls      hall[]
-  movies     movieCinema[] 
-  tickets    sessionTicket[]
+  movies     moviecinema[] 
+  tickets    sessionticket[]
   dates      date[]
   image       images[]
 }
@@ -108,7 +108,7 @@ model hall {
   maximumRows Int
   cinemaData  cinema          @relation(fields: [cinemaID], references: [id])
   cinemaID    Int
-  tickets     sessionTicket[]
+  tickets     sessionticket[]
 }
 
 model date {
@@ -116,7 +116,7 @@ model date {
   date       DateTime        @unique
   cinemaData cinema          @relation(fields: [cinemaID], references: [id])
   cinemaID   Int
-  tickets    sessionTicket[]
+  tickets    sessionticket[]
 }
 
 

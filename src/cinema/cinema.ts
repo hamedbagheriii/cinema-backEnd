@@ -118,7 +118,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       .post(
         '/UPMovies/:id',
         async ({ params: { id }, body: { movies } }) => {
-            const res = await Prisma.movieCinema.createMany({
+            const res = await Prisma.moviecinema.createMany({
               data :  movies.map((movie: number) => ({ movieId: movie, cinemaID: id }))
             })
            
