@@ -3,7 +3,13 @@
   "version": "1.0.50",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "db:dev": "prisma migrate dev",
+    "db:prod": "bunx prisma migrate deploy",
+    "db:generate": "bunx prisma generate",
+    "build": "bun build ./src/index.ts --outdir ./build --target bun",
+    "start": "bun run build/index.js",
+    "build:start": "bun run build && bun run start"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
