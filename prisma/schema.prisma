@@ -11,7 +11,7 @@ datasource db {
 
 // ! ----- MODELS FOR USER ----- !
 
-model User {
+model user {
   id        String          @id @default(cuid())
   email     String          @unique
   fristName String
@@ -19,12 +19,12 @@ model User {
   password  String
   token     sessionToken[]
   tickets   sessionTicket[]
-  wallet    Wallet[]
+  wallet    wallet[]
 }
 
-model Wallet {
+model wallet {
   id       String @id @default(cuid())
-  userData User   @relation(fields: [email], references: [email])
+  userData user   @relation(fields: [email], references: [email])
   email    String @unique
   Amount   Int    @default(0)
 }
@@ -32,22 +32,22 @@ model Wallet {
 model sessionToken {
   id       Int    @id @default(autoincrement())
   token    String @unique
-  userData User   @relation(fields: [userId], references: [id])
+  userData user   @relation(fields: [userId], references: [id])
   userId   String
 }
 
 // ! ----- MODELS FOR MOVIES ----- !
-model MovieCinema {
+model movieCinema {
   id       String  @unique @default(cuid())
   cinema   cinema @relation(fields: [cinemaID], references: [id])
-  movie    Movies @relation(fields: [movieId], references: [id])
+  movie    movies @relation(fields: [movieId], references: [id])
   movieId  Int
   cinemaID Int
 
   @@id([movieId, cinemaID]) 
 }
 
-model Movies {
+model movies {
   id         Int             @id @unique @default(autoincrement())
   movieName  String          @unique
   decription String
@@ -55,8 +55,8 @@ model Movies {
   price      Int
   createdAt  String
   Tickets    sessionTicket[]
-  cinemaData MovieCinema[]
-  image       Images[]
+  cinemaData movieCinema[]
+  image       images[]
 }
 
 model row {
@@ -71,15 +71,15 @@ model row {
 
 model sessionTicket {
   ticket     Int      @unique
-  userData   User     @relation(fields: [email], references: [email])
+  userData   user     @relation(fields: [email], references: [email])
   email      String
-  movieData  Movies   @relation(fields: [movieId], references: [id])
+  movieData  movies   @relation(fields: [movieId], references: [id])
   movieId    Int
   useTicket  Boolean  @default(false)
   rows       row[]
   cinemaData cinema   @relation(fields: [cinemaID], references: [id])
   cinemaID   Int
-  hallData   Hall     @relation(fields: [hallID], references: [id])
+  hallData   hall     @relation(fields: [hallID], references: [id])
   hallID     Int
   dateEvent  date     @relation(fields: [date], references: [date])
   date       DateTime
@@ -95,14 +95,14 @@ model cinema {
   address    String
   city       String
   province   String
-  halls      Hall[]
-  movies     MovieCinema[] 
+  halls      hall[]
+  movies     movieCinema[] 
   tickets    sessionTicket[]
   dates      date[]
-  image       Images[]
+  image       images[]
 }
 
-model Hall {
+model hall {
   id          Int             @unique @default(autoincrement())
   hallName    String
   maximumRows Int
@@ -122,12 +122,12 @@ model date {
 
 // ! ----- MODELS FOR IMAGES ----- !
 
-model Images {
+model images {
   id        String  @id @default(cuid())
   name      String  @unique
   url       String
   createdAt DateTime? @default(now())
-  movieData Movies? @relation(fields: [movieId], references: [id])
+  movieData movies? @relation(fields: [movieId], references: [id])
   movieId   Int?
   cinemaData cinema? @relation(fields: [cinemaID], references: [id])
   cinemaID  Int?
