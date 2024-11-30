@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
   engineType    = "binary"
 }
@@ -20,6 +20,7 @@ model user {
   token     sessiontoken[]
   tickets   sessionticket[]
   wallet    wallet[]
+  roles     rolesuser[]
 }
 
 model wallet {
@@ -38,13 +39,13 @@ model sessiontoken {
 
 // ! ----- MODELS FOR MOVIES ----- !
 model moviecinema {
-  id       String  @unique @default(cuid())
+  id       String @unique @default(cuid())
   cinema   cinema @relation(fields: [cinemaID], references: [id])
   movie    movies @relation(fields: [movieId], references: [id])
   movieId  Int
   cinemaID Int
 
-  @@id([movieId, cinemaID]) 
+  @@id([movieId, cinemaID])
 }
 
 model movies {
@@ -56,7 +57,7 @@ model movies {
   createdAt  String
   Tickets    sessionticket[]
   cinemaData moviecinema[]
-  image       images[]
+  image      images[]
 }
 
 model row {
@@ -96,10 +97,10 @@ model cinema {
   city       String
   province   String
   halls      hall[]
-  movies     moviecinema[] 
+  movies     moviecinema[]
   tickets    sessionticket[]
   dates      date[]
-  image       images[]
+  image      images[]
 }
 
 model hall {
@@ -119,16 +120,51 @@ model date {
   tickets    sessionticket[]
 }
 
-
 // ! ----- MODELS FOR IMAGES ----- !
 
 model images {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  url       String
-  createdAt DateTime? @default(now())
-  movieData movies? @relation(fields: [movieId], references: [id])
-  movieId   Int?
-  cinemaData cinema? @relation(fields: [cinemaID], references: [id])
-  cinemaID  Int?
+  id         String    @id @default(cuid())
+  name       String    @unique
+  url        String
+  createdAt  DateTime? @default(now())
+  movieData  movies?   @relation(fields: [movieId], references: [id])
+  movieId    Int?
+  cinemaData cinema?   @relation(fields: [cinemaID], references: [id])
+  cinemaID   Int?
+}
+
+// ! ----- MODELS FOR ROLES ----- !
+
+// use for user => {
+model rolesuser {
+  id       Int    @unique @default(autoincrement())
+  roleData role   @relation(fields: [roleID], references: [id])
+  userData user   @relation(fields: [userID], references: [id])
+  userID   String
+  roleID   Int
+
+  @@id([userID, roleID])
+}
+// <= }
+model rolepermissions {
+  id             Int        @unique @default(autoincrement())
+  roleData       role       @relation(fields: [roleID], references: [id])
+  permissionData permission @relation(fields: [permissionID], references: [id])
+  roleID         Int
+  permissionID   Int
+
+  @@id([roleID, permissionID])
+}
+
+model role {
+  id          Int               @id @default(autoincrement())
+  roleName    String            @unique
+  users       rolesuser[]
+  permissions rolepermissions[]
+}
+
+model permission {
+  id             Int               @id @default(autoincrement())
+  permName String            @unique
+  roles          rolepermissions[]
 }

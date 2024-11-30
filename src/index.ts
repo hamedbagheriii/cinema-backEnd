@@ -6,6 +6,7 @@ import { ticket } from './tickets/ticket';
 import { cinema } from './cinema/cinema';
 import cors from '@elysiajs/cors';
 import { wallets } from './wallet/wallet';
+import { role } from './roles/role';
 
 const app = new Elysia()
   .use(
@@ -22,5 +23,6 @@ const app = new Elysia()
   .use(ticket)
   .use(cinema)
   .use(wallets)
+  .use(role)
 
   .listen(3100);
