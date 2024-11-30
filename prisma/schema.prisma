@@ -145,6 +145,7 @@ model rolesuser {
 
   @@id([userID, roleID])
 }
+
 // <= }
 model rolepermissions {
   id             Int        @unique @default(autoincrement())
@@ -159,12 +160,14 @@ model rolepermissions {
 model role {
   id          Int               @id @default(autoincrement())
   roleName    String            @unique
+  roleDec     String
   users       rolesuser[]
   permissions rolepermissions[]
 }
 
 model permission {
-  id             Int               @id @default(autoincrement())
+  id       Int               @id @default(autoincrement())
   permName String            @unique
-  roles          rolepermissions[]
+  category String
+  roles    rolepermissions[]
 }
