@@ -45,6 +45,70 @@ export const role = new Elysia().group('/roles', (app) => {
 
       // ! ==================== roles ====================
 
+      // ! delete role =>
+      .delete(
+        '/delete/:id',
+        async ({ params: { id } }) => {
+          const deletePerms = await Prisma.rolepermissions
+            .deleteMany({
+              where: {
+                roleID: id,
+              },
+            })
+            .then(async () => {
+              const deleteRole = await Prisma.role.delete({
+                where: {
+                  id,
+                },
+              });
+            });
+
+          return {
+            message: 'نقش با موفقیت حذف شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ params: { id }, set }) => {
+            const checkRole = await Prisma.role.findUnique({
+              where: {
+                id,
+              },
+            });
+
+            if (checkRole === null) {
+              set.status = 404;
+              return {
+                message: 'نقش مورد نظر وجود ندارد !',
+                success: false,
+              };
+            }
+          },
+          params: t.Object({
+            id: t.Number(),
+          }),
+        }
+      )
+
+      // ! get all roles =>
+      .get('/', async () => {
+        const allRole = await Prisma.role.findMany({
+            include : {
+                permissions : {
+                    include : {
+                        permissionData : true
+                    }
+                }
+            }
+        });
+
+        return {
+          message: 'نقش ها با موفقیت دریافت شد !',
+          success: true,
+          roles: allRole,
+        };
+      })
+
       //! handle check there is role and there is permission =>
       .onBeforeHandle(async ({ body, set }) => {
         const { roleName, permissions } = body as {
@@ -192,7 +256,5 @@ export const role = new Elysia().group('/roles', (app) => {
           }),
         }
       )
-
-      // !   
   );
 });
