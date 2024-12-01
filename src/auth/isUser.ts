@@ -31,7 +31,20 @@ export class authClass {
               }
             },
             wallet : true,
-            token : true
+            token : true,
+            roles : {
+              include :{
+                roleData : {
+                  include : {
+                    permissions : {
+                      include : {
+                        permissionData : true
+                      }
+                    }
+                  }
+                },
+              }
+            },
           },
         },
       },

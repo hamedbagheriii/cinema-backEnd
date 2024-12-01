@@ -1,9 +1,59 @@
 import Elysia, { t } from 'elysia';
-import { Prisma } from '../auth/auth';
+import { auth, Prisma } from '../auth/auth';
+import { hasAccessClass } from '../auth/hasAccess';
 
 export const role = new Elysia().group('/roles', (app) => {
   return (
     app
+      .state('checkToken', null as null | any)
+
+      // ! check Token validate
+      .guard({
+        headers: t.Object({
+          authorization: t.String(),
+        }),
+      })
+      .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
+        const checkToken = await auth.checkToken((authorization as string) || '');
+        if (checkToken !== null) {
+          store.checkToken = checkToken;
+        } else {
+          return {
+            message: 'توکن اشتباه است !',
+            success: false,
+          };
+        }
+      })
+
+      // ! ==================== user roles ====================
+    //   چک شود که بسازیم یا نه
+      // ! add user roles =>
+      .put(
+        '/addUser',
+        async ({ body: { userID, roles }, set }) => {
+          const addUserRole = await Prisma.rolesuser.createMany({
+            data: roles.map((t) => {
+              return {
+                roleID: t,
+                userID,
+              };
+            }),
+            skipDuplicates: true,
+          });
+
+          return {
+            message: 'نقش های کاربر با موفقیت ویرایش شد !',
+            success: true,
+            roles: addUserRole,
+          };
+        },
+        {
+          body: t.Object({
+            userID: t.String(),
+            roles: t.Array(t.Number()),
+          }),
+        }
+      )
 
       // ! ==================== permissions ====================
 
@@ -33,15 +83,25 @@ export const role = new Elysia().group('/roles', (app) => {
       )
 
       // ! get all perm for show
-      .get('/perm', async () => {
-        const allPerm = await Prisma.permission.findMany();
+      .get(
+        '/perm',
+        async () => {
+          const allPerm = await Prisma.permission.findMany();
 
-        return {
-          message: 'دسترسی ها با موفقیت دریافت شد !',
-          success: true,
-          perm: allPerm,
-        };
-      })
+          return {
+            message: 'دسترسی ها با موفقیت دریافت شد !',
+            success: true,
+            perm: allPerm,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkRole = hasAccessClass.hasAccess('perm2',
+            checkToken.userData.roles, set);
+            if (await checkRole !== true) return checkRole;
+          },
+        }
+      )
 
       // ! ==================== roles ====================
 
@@ -93,13 +153,13 @@ export const role = new Elysia().group('/roles', (app) => {
       // ! get all roles =>
       .get('/', async () => {
         const allRole = await Prisma.role.findMany({
-            include : {
-                permissions : {
-                    include : {
-                        permissionData : true
-                    }
-                }
-            }
+          include: {
+            permissions: {
+              include: {
+                permissionData: true,
+              },
+            },
+          },
         });
 
         return {
