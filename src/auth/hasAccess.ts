@@ -6,7 +6,7 @@ export class AccessClass {
             allPerms.push(...perms);
         })
         
-        const checkRole = allPerms.filter(t => t.permissionData.permName === role)[0];
+        const checkRole = allPerms.filter(t => t.permissionData.permName === ('allAccess' || role))[0];
         
         if (checkRole) return true;       
         

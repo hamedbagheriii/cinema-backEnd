@@ -1,10 +1,39 @@
 import Elysia, { t } from 'elysia';
-import { Prisma } from '../auth/auth';
+import { auth, Prisma } from '../auth/auth';
 import { imgAwcClass } from '../imageAWS/upIMG';
+import { hasAccessClass } from '../auth/hasAccess';
 
 export const cinema = new Elysia().group('/cinema', (app) => {
   return (
     app
+
+    .state('checkToken', null as null | any)
+
+    // ! check Token validate
+    .guard({
+      headers: t.Object({
+        authorization: t.String(),
+      }),
+    })
+    .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
+      const checkToken = await auth.checkToken((authorization as string) || '');
+      if (checkToken !== null) {
+        store.checkToken = checkToken;
+      } else {
+        return {
+          message: 'توکن اشتباه است !',
+          success: false,
+        };
+      }
+
+      // main access control for role api =>
+      const checkUserRole = hasAccessClass.hasAccess(
+        'get-cinema',
+        checkToken.userData.roles,
+        set
+      );
+      if ((await checkUserRole) !== true) return checkUserRole;
+    })
 
       // ! add cinema
       .post(
@@ -45,7 +74,14 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { image }, set }) => {
+          beforeHandle: async ({ body: { image }, set , store : {checkToken}}) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-cinema',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
             // check image =>
             if (!image) {
               set.status = 400;
@@ -108,6 +144,14 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'get-cieama',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
           params: t.Object({
             id: t.Optional(t.Number()),
           }),
@@ -130,6 +174,14 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-cinema',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
           params: t.Object({
             id: t.Number(),
           }),
@@ -159,6 +211,14 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-hall',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
           body: t.Object({
             hallName: t.String(),
             maximumRows: t.Number(),
@@ -196,130 +256,18 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'get-halll',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
           params: t.Object({
             id: t.Optional(t.Number()),
           }),
         }
       )
-
-      // ! ==================== Dates ====================
-
-      // // ! add dates
-      // .post(
-      //   '/dates/add',
-      //   async ({ body: { date, cinemaID } }) => {
-      //     const dateRecord = await Prisma.date.create({
-      //       data: {
-      //         date,
-      //         cinemaID,
-      //       },
-      //     });
-
-      //     return {
-      //       data: dateRecord,
-      //       message: 'افزودن تاریخ با موفقیت انجام شد !',
-      //       success: true,
-      //     };
-      //   },
-      //   {
-      //     body: t.Object({
-      //       date: t.Date(),
-      //       cinemaID: t.Number(),
-      //     }),
-      //   }
-      // )
-
-      // // ! get dates
-      // .get(
-      //   '/dates',
-      //   async ({ query: { cinemaID } }) => {
-      //     const dates = await Prisma.date.findMany({
-      //       where: {
-      //         cinemaID,
-      //       },
-      //       include: {
-      //         dateTimes: true,
-      //         cinemaData: true,
-      //       },
-      //     });
-
-      //     return {
-      //       data: dates,
-      //       message: 'دریافت تاریخ ها با موفقیت انجام شد !',
-      //       success: true,
-      //     };
-      //   },
-      //   {
-      //     query: t.Object({
-      //       cinemaID: t.Number(),
-      //     }),
-      //   }
-      // )
-
-      // ! ==================== Date Times ====================
-
-      // // ! add Time
-      // .post(
-      //   '/dateTime/add',
-      //   async ({ body: { Time, date } }) => {
-      //     const newTime = await Prisma.dateTime.create({
-      //       data: {
-      //         Time,
-      //         date,
-      //       },
-      //     });
-
-      //     return {
-      //       data: newTime,
-      //       message: 'تایم مورد نظر اضافه شد !',
-      //       success: true,
-      //     };
-      //   },
-      //   {
-      //     beforeHandle: async ({ body: { Time, date } }) => {
-      //       const checkDate = await Prisma.date.findUnique({
-      //         where: {
-      //           date,
-      //         },
-      //       });
-
-      //       if (!checkDate) {
-      //         return {
-      //           message: 'روز مورد نظر یافت نشد !',
-      //           success: false,
-      //         };
-      //       }
-      //     },
-      //     body: t.Object({
-      //       Time: t.String(),
-      //       date: t.Date(),
-      //     }),
-      //   }
-      // )
-
-      // // ! get Times
-      // .get(
-      //   '/dateTime/:id?',
-      //   async ({ params: { id } }) => {
-      //     let dateTimes;
-      //     if (id) {
-      //       dateTimes = await Prisma.dateTime.findMany({
-      //         where: { id },
-      //       });
-      //     }
-      //     dateTimes = await Prisma.dateTime.findMany();
-
-      //     return {
-      //       data: dateTimes,
-      //       message: 'تایم مورد نظر اضافه شد !',
-      //       success: true,
-      //     };
-      //   },
-      //   {
-      //     params: t.Object({
-      //       id: t.Optional(t.Number()),
-      //     }),
-      //   }
-      // )
   );
 });
