@@ -2,6 +2,34 @@ import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { hasAccessClass } from '../auth/hasAccess';
 
+
+// ! utils class for this page =>
+class checkThereIs {
+  // validate for there is data in db =>
+  async validate(validateArry: any[] , dataArry: any[] , set: any, title: string) {
+    let isTrue: boolean = true;
+
+    validateArry = validateArry.map((t) => t.id);
+
+    await Promise.all(
+      dataArry.map(async (item) => {
+        if (!validateArry.includes(item)) {
+          return (isTrue = false);
+        }
+      })
+    );
+
+    if (!isTrue) {
+      set.status = 404;
+      return {
+        message: `${title} مورد نظر وجود ندارد !`,
+        success: false,
+      };
+    }
+  }
+}
+const checkClass = new checkThereIs();
+
 export const role = new Elysia().group('/roles', (app) => {
   return (
     app
@@ -96,25 +124,7 @@ export const role = new Elysia().group('/roles', (app) => {
 
             // validate for there is role =>
             let allRoles: any[] = await Prisma.role.findMany();
-            let isRole: boolean = true;
-
-            allRoles = allRoles.map((t) => t.id);
-
-            await Promise.all(
-              roles.map(async (role) => {
-                if (!allRoles.includes(role)) {
-                  return (isRole = false);
-                }
-              })
-            );
-
-            if (!isRole) {
-              set.status = 404;
-              return {
-                message: 'نقش مورد نظر وجود ندارد !',
-                success: false,
-              };
-            }
+            return checkClass.validate(allRoles, roles, set, 'نقش');
           },
           body: t.Object({
             userID: t.String(),
@@ -348,7 +358,11 @@ export const role = new Elysia().group('/roles', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { roleName , permissions }, set, store: { checkToken } }) => {
+          beforeHandle: async ({
+            body: { roleName, permissions },
+            set,
+            store: { checkToken },
+          }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'add-role',
               checkToken.userData.roles,
@@ -371,25 +385,7 @@ export const role = new Elysia().group('/roles', (app) => {
 
             // validate for there is permissions =>
             let allPerm: any[] = await Prisma.permission.findMany();
-            let isPerm: boolean = true;
-
-            allPerm = allPerm.map((t) => t.id);
-
-            await Promise.all(
-              permissions.map(async (role) => {
-                if (!allPerm.includes(role)) {
-                  return (isPerm = false);
-                }
-              })
-            );
-
-            if (!isPerm) {
-              set.status = 404;
-              return {
-                message: 'دسترسی مورد نظر وجود ندارد !',
-                success: false,
-              };
-            }
+            return checkClass.validate(allPerm, permissions, set, 'دسترسی');
           },
         }
       )
@@ -452,13 +448,17 @@ export const role = new Elysia().group('/roles', (app) => {
           };
         },
         {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
+          beforeHandle: async ({ store: { checkToken }, set , body : {permissions} }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'edit-role',
               checkToken.userData.roles,
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
+
+            // validate for there is permission =>
+            let allPerm: any[] = await Prisma.permission.findMany();
+            return checkClass.validate(allPerm, permissions, set, 'دسترسی');
           },
           params: t.Object({
             id: t.Number(),
