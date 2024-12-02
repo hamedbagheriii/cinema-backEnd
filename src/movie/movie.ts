@@ -1,7 +1,8 @@
 import Elysia, { t } from 'elysia';
-import { Prisma } from '../auth/auth';
+import { auth, Prisma } from '../auth/auth';
 import { stToArrClass } from '../utils/stToArr';
 import { imgAwcClass } from '../imageAWS/upIMG';
+import { hasAccessClass } from '../auth/hasAccess';
 
 // ! dependencies
 export const arrNumberClass = new stToArrClass();
@@ -9,6 +10,150 @@ export const arrNumberClass = new stToArrClass();
 export const movie = new Elysia().group('/movie', (app) => {
   return (
     app
+
+      .state('checkToken', null as null | any)
+
+      // ! get Movies
+      .get(
+        '/:id?',
+        async ({ params: { id } }) => {
+          let movies;
+          if (id) {
+            movies = await Prisma.movies.findUnique({
+              where: { id },
+              include: {
+                cinemaData: {
+                  include: {
+                    cinema: {
+                      include: {
+                        halls: true,
+                        image: true,
+                      },
+                    },
+                  },
+                },
+                image: true,
+              },
+            });
+          } else {
+            movies = await Prisma.movies.findMany({
+              include: {
+                cinemaData: {
+                  include: {
+                    cinema: {
+                      include: {
+                        halls: true,
+                        image: true,
+                      },
+                    },
+                  },
+                },
+                image: true,
+              },
+            });
+          }
+
+          return {
+            message: `فیلم ها با موفقیت دریافت شدند .`,
+            data: movies,
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // !  get resarved seats
+      .get(
+        '/resarvedSeats/:movieID/:cinemaID/:hallID/:dateEvent/:Time',
+        async ({ params: { movieID, cinemaID, hallID, dateEvent, Time } }) => {
+          // ! دریافت تیکت های مربوط به فیلم
+          const getAllTicket = await Prisma.sessionticket.findMany({
+            where: {
+              movieId: movieID,
+              cinemaID,
+              hallID,
+              date: dateEvent,
+              Time,
+            },
+            include: {
+              rows: true,
+            },
+          });
+
+          // ! تبدیل صندلی های رزرو به آرایه
+          let allSeats: any[] = [];
+          getAllTicket.forEach((item: any) => {
+            item.rows.forEach(async (row: any) => {
+              allSeats.push({
+                row: row.row,
+                selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
+              });
+            });
+          });
+
+          return {
+            data: allSeats,
+            success: true,
+            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
+          };
+        },
+        {
+          params: t.Object({
+            movieID: t.Number(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
+            dateEvent: t.Date(),
+            Time: t.String(),
+          }),
+        }
+      )
+
+      // ! get image for slider
+      .get('/slider', async () => {
+        const sliderIMG = await Prisma.images.findMany({
+          where: {
+            movieId: null,
+            cinemaID: null,
+          },
+        });
+        return {
+          data: sliderIMG,
+          message: 'عکس با موفقیت دریافت شد !',
+          success: true,
+        };
+      })
+
+      // ! ==================== need access ====================
+
+      // ! check Token validate
+      .guard({
+        headers: t.Object({
+          authorization: t.String(),
+        }),
+      })
+      .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
+        const checkToken = await auth.checkToken((authorization as string) || '');
+        if (checkToken !== null) {
+          store.checkToken = checkToken;
+        } else {
+          return {
+            message: 'توکن اشتباه است !',
+            success: false,
+          };
+        }
+
+        // main access control for role api =>
+        const checkUserRole = hasAccessClass.hasAccess(
+          'get-movie',
+          checkToken.userData.roles,
+          set
+        );
+        if ((await checkUserRole) !== true) return checkUserRole;
+      })
 
       // ! add Movie
       .post(
@@ -52,7 +197,18 @@ export const movie = new Elysia().group('/movie', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { movieName, image }, set }) => {
+          beforeHandle: async ({
+            body: { movieName, image },
+            set,
+            store: { checkToken },
+          }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-movie',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
             // check image =>
             if (!image) {
               set.status = 400;
@@ -87,105 +243,6 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
-      // ! get Movies
-      .get(
-        '/:id?',
-        async ({ params: { id } }) => {
-          let movies;
-          if (id) {
-            movies = await Prisma.movies.findUnique({
-              where: { id },
-              include: {
-                cinemaData: {
-                  include : {
-                    cinema : {
-                      include : {
-                        halls : true,
-                        image : true,
-                      }
-                    }
-                  }
-                },
-                image: true,
-              },
-            });
-          } else {
-            movies = await Prisma.movies.findMany({
-              include: {
-                cinemaData: {
-                  include : {
-                    cinema : {
-                      include : {
-                        halls : true,
-                        image : true,
-                      }
-                    }
-                  }
-                },
-                image: true,
-              },
-            });
-          }
-
-          return {
-            message: `فیلم ها با موفقیت دریافت شدند .`,
-            data: movies,
-            success: true,
-          };
-        },
-        {
-          params: t.Object({
-            id: t.Optional(t.Number()),
-          }),
-        }
-      )
-
-      // !  get resarved seats
-      .get(
-        '/resarvedSeats/:movieID/:cinemaID/:hallID/:dateEvent/:Time',
-        async ({ params: { movieID, cinemaID, hallID,dateEvent,Time }}) => {
-          // ! دریافت تیکت های مربوط به فیلم
-          const getAllTicket = await Prisma.sessionticket.findMany({
-            where: {
-              movieId: movieID,
-              cinemaID,
-              hallID,
-              date: dateEvent,
-              Time
-            },
-            include: {
-              rows: true,
-            },
-          });
-
-          // ! تبدیل صندلی های رزرو به آرایه
-          let allSeats: any[] = [];
-          getAllTicket.forEach((item: any) => {
-            item.rows.forEach(async (row: any) => {
-              allSeats.push({
-                row: row.row,
-                selectedSeats: await arrNumberClass.stToArr(row.selectedSeats),
-              });
-            });
-          });
-
-          return {
-            data: allSeats,
-            success: true,
-            message: 'صندلی های رزرو با موفقیت دریافت شدند !',
-          };
-        },
-        {
-          params: t.Object({
-            movieID: t.Number(),
-            cinemaID: t.Number(),
-            hallID: t.Number(),
-            dateEvent: t.Date(),
-            Time : t.String()
-          }),
-        }
-      )
-
       // ! ==================== slider ====================
 
       // ! add image for slider
@@ -215,7 +272,18 @@ export const movie = new Elysia().group('/movie', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { movieName, image }, set }) => {
+          beforeHandle: async ({
+            body: { movieName, image },
+            set,
+            store: { checkToken },
+          }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-slider',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
             // check image =>
             if (!image) {
               set.status = 400;
@@ -229,24 +297,6 @@ export const movie = new Elysia().group('/movie', (app) => {
             movieName: t.String(),
             image: t.File(),
           }),
-        }
-      )
-
-      // ! get image for slider
-      .get(
-        '/slider',
-        async () => {
-          const sliderIMG = await Prisma.images.findMany({
-            where : {
-              movieId : null,
-              cinemaID : null,
-            }
-          });
-          return {
-            data: sliderIMG,
-            message: 'عکس با موفقیت دریافت شد !',
-            success: true,
-          };
         }
       )
   );

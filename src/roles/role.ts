@@ -1,34 +1,7 @@
 import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { hasAccessClass } from '../auth/hasAccess';
-
-
-// ! utils class for this page =>
-class checkThereIs {
-  // validate for there is data in db =>
-  async validate(validateArry: any[] , dataArry: any[] , set: any, title: string) {
-    let isTrue: boolean = true;
-
-    validateArry = validateArry.map((t) => t.id);
-
-    await Promise.all(
-      dataArry.map(async (item) => {
-        if (!validateArry.includes(item)) {
-          return (isTrue = false);
-        }
-      })
-    );
-
-    if (!isTrue) {
-      set.status = 404;
-      return {
-        message: `${title} مورد نظر وجود ندارد !`,
-        success: false,
-      };
-    }
-  }
-}
-const checkClass = new checkThereIs();
+import { checkClass } from '../utils/checkThereIs';
 
 export const role = new Elysia().group('/roles', (app) => {
   return (
@@ -448,7 +421,7 @@ export const role = new Elysia().group('/roles', (app) => {
           };
         },
         {
-          beforeHandle: async ({ store: { checkToken }, set , body : {permissions} }) => {
+          beforeHandle: async ({ store: { checkToken }, set, body: { permissions } }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'edit-role',
               checkToken.userData.roles,

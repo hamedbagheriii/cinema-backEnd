@@ -2,38 +2,125 @@ import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { imgAwcClass } from '../imageAWS/upIMG';
 import { hasAccessClass } from '../auth/hasAccess';
+import { checkClass } from '../utils/checkThereIs';
 
 export const cinema = new Elysia().group('/cinema', (app) => {
   return (
     app
 
-    .state('checkToken', null as null | any)
+      .state('checkToken', null as null | any)
 
-    // ! check Token validate
-    .guard({
-      headers: t.Object({
-        authorization: t.String(),
-      }),
-    })
-    .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
-      const checkToken = await auth.checkToken((authorization as string) || '');
-      if (checkToken !== null) {
-        store.checkToken = checkToken;
-      } else {
-        return {
-          message: 'توکن اشتباه است !',
-          success: false,
-        };
-      }
+      // ! get cinemas
+      .get(
+        '/:id?',
+        async ({ params: { id } }) => {
+          let cinemas;
+          if (id) {
+            cinemas = await Prisma.cinema.findUnique({
+              where: {
+                id,
+              },
+              include: {
+                halls: true,
+                movies: {
+                  include: {
+                    movie: {
+                      include: {
+                        image: true,
+                      },
+                    },
+                  },
+                },
+                image: true,
+                dates: true,
+              },
+            });
+          } else {
+            cinemas = await Prisma.cinema.findMany({
+              include: {
+                halls: true,
+                movies: true,
+                image: true,
+                dates: true,
+              },
+            });
+          }
 
-      // main access control for role api =>
-      const checkUserRole = hasAccessClass.hasAccess(
-        'get-cinema',
-        checkToken.userData.roles,
-        set
-      );
-      if ((await checkUserRole) !== true) return checkUserRole;
-    })
+          return {
+            data: cinemas,
+            message: 'دریافت سینماها با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // ! get halls
+      .get(
+        '/halls/:id?',
+        async ({ params: { id } }) => {
+          let halls;
+          if (id) {
+            halls = await Prisma.hall.findUnique({
+              where: {
+                id,
+              },
+              include: {
+                cinemaData: true,
+              },
+            });
+          } else {
+            halls = await Prisma.hall.findMany({
+              include: {
+                cinemaData: true,
+              },
+            });
+          }
+
+          return {
+            data: halls,
+            message: 'دریافت سالن ها با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // ! ==================== need access ====================
+
+      // ! check Token validate
+      .guard({
+        headers: t.Object({
+          authorization: t.String(),
+        }),
+      })
+      .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
+        const checkToken = await auth.checkToken((authorization as string) || '');
+        if (checkToken !== null) {
+          store.checkToken = checkToken;
+        } else {
+          return {
+            message: 'توکن اشتباه است !',
+            success: false,
+          };
+        }
+
+        // main access control for role api =>
+        const checkUserRole = hasAccessClass.hasAccess(
+          'get-cinema',
+          checkToken.userData.roles,
+          set
+        );
+        if ((await checkUserRole) !== true) return checkUserRole;
+      })
 
       // ! add cinema
       .post(
@@ -74,7 +161,11 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { image }, set , store : {checkToken}}) => {
+          beforeHandle: async ({
+            body: { image, cinemaName },
+            set,
+            store: { checkToken },
+          }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'add-cinema',
               checkToken.userData.roles,
@@ -101,71 +192,13 @@ export const cinema = new Elysia().group('/cinema', (app) => {
         }
       )
 
-      // ! get cinemas
-      .get(
-        '/:id?',
-        async ({ params: { id } }) => {
-          let cinemas;
-          if (id) {
-            cinemas = await Prisma.cinema.findUnique({
-              where: {
-                id,
-              },
-              include: {
-                halls: true,
-                movies: {
-                  include : {
-                    movie : {
-                      include : {
-                        image : true
-                      }
-                    }
-                  }
-                },
-                image: true,
-                dates: true,
-              },
-            });
-          } else {
-            cinemas = await Prisma.cinema.findMany({
-              include: {
-                halls: true,
-                movies: true,
-                image: true,
-                dates: true,
-              },
-            });
-          }
-
-          return {
-            data: cinemas,
-            message: 'دریافت سینماها با موفقیت انجام شد !',
-            success: true,
-          };
-        },
-        {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
-            const checkUserRole = hasAccessClass.hasAccess(
-              'get-cieama',
-              checkToken.userData.roles,
-              set
-            );
-            if ((await checkUserRole) !== true) return checkUserRole;
-          },
-          params: t.Object({
-            id: t.Optional(t.Number()),
-          }),
-        }
-      )
-
       // ! add movies to cinema
       .post(
         '/UPMovies/:id',
         async ({ params: { id }, body: { movies } }) => {
-            const res = await Prisma.moviecinema.createMany({
-              data :  movies.map((movie: number) => ({ movieId: movie, cinemaID: id }))
-            })
-           
+          const res = await Prisma.moviecinema.createMany({
+            data: movies.map((movie: number) => ({ movieId: movie, cinemaID: id })),
+          });
 
           return {
             res,
@@ -174,13 +207,36 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
+          beforeHandle: async ({
+            store: { checkToken },
+            set,
+            body: { movies },
+            params: { id },
+          }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'add-cinema',
               checkToken.userData.roles,
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
+
+            // validate for there is cinema =>
+            const checkCinema = await Prisma.cinema.findUnique({
+              where: {
+                id,
+              },
+            });
+            if (checkCinema === null) {
+              set.status = 404;
+              return {
+                message: 'سینما مورد نظر وجود ندارد !',
+                success: false,
+              };
+            }
+
+            // validate for there is movies  =>
+            const allMovies = await Prisma.movies.findMany();
+            return checkClass.validate(allMovies, movies, set, 'فیلم');
           },
           params: t.Object({
             id: t.Number(),
@@ -190,6 +246,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           }),
         }
       )
+      
       // ! ==================== Halls ====================
 
       // ! add halls
@@ -211,61 +268,32 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           };
         },
         {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
+          beforeHandle: async ({ store: { checkToken }, set, body: { cinemaID } }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'add-hall',
               checkToken.userData.roles,
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
+
+            // validate for there is cinema =>
+            const checkCinema = await Prisma.cinema.findUnique({
+              where: {
+                id: cinemaID,
+              },
+            });
+            if (checkCinema === null) {
+              set.status = 404;
+              return {
+                message: 'سینما مورد نظر وجود ندارد !',
+                success: false,
+              };
+            }
           },
           body: t.Object({
             hallName: t.String(),
             maximumRows: t.Number(),
             cinemaID: t.Number(),
-          }),
-        }
-      )
-
-      // ! get halls
-      .get(
-        '/halls/:id?',
-        async ({ params: { id } }) => {
-          let halls;
-          if (id) {
-            halls = await Prisma.hall.findUnique({
-              where: {
-                id,
-              },
-              include: {
-                cinemaData: true,
-              },
-            });
-          } else {
-            halls = await Prisma.hall.findMany({
-              include: {
-                cinemaData: true,
-              },
-            });
-          }
-
-          return {
-            data: halls,
-            message: 'دریافت سالن ها با موفقیت انجام شد !',
-            success: true,
-          };
-        },
-        {
-          beforeHandle: async ({ store: { checkToken }, set }) => {
-            const checkUserRole = hasAccessClass.hasAccess(
-              'get-halll',
-              checkToken.userData.roles,
-              set
-            );
-            if ((await checkUserRole) !== true) return checkUserRole;
-          },
-          params: t.Object({
-            id: t.Optional(t.Number()),
           }),
         }
       )
