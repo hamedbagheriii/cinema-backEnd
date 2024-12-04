@@ -2,6 +2,8 @@ import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { arrNumberClass } from '../movie/movie';
 import { wallets } from '../wallet/wallet';
+import { hasAccessClass } from '../auth/hasAccess';
+import moment from 'moment';
 
 export const ticket = new Elysia().group('/ticket', (app) => {
   return (
@@ -101,15 +103,13 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               },
             });
             if (!date) {
-              const newDate = await Prisma.date
-                .create({
-                  data: {
-                    date: dateEvent,
-                    cinemaID,
-                  },
-                })
+              const newDate = await Prisma.date.create({
+                data: {
+                  date: dateEvent,
+                  cinemaID,
+                },
+              });
             }
-
 
             if (WalletData.Amount < price) {
               set.status = 400;
@@ -206,7 +206,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           };
         },
         {
-          beforeHandle: async ({ params: { ticket }, store: { checkToken } ,set}) => {
+          beforeHandle: async ({ params: { ticket }, store: { checkToken }, set }) => {
             const isTicket = await Prisma.sessionticket.findUnique({
               where: {
                 ticket,
@@ -231,6 +231,114 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           params: t.Object({
             ticket: t.Number(),
           }),
+        }
+      )
+
+      // ! ============================= admin dahsboard =============================
+
+      // ! get Income for admin dashboard
+      .get(
+        '/getIncome',
+        async () => {
+          let income: any[] = await Prisma.sessionticket.findMany();
+
+          // filter by dates
+          let todayIncome = income.filter(
+            (t) => t.date >= new Date(new Date().setDate(new Date().getDay()))
+          );
+          let monthlyIncome = income.filter(
+            (t) => t.date >= new Date(new Date().setMonth(new Date().getMonth() - 1))
+          );
+          let yearlyIncome = income.filter(
+            (t) =>
+              t.date >= new Date(new Date().setFullYear(new Date().getFullYear() - 1))
+          );
+
+          // tickets length
+          const tickets_Length = [
+            todayIncome.length || 0,
+            monthlyIncome.length || 0,
+            yearlyIncome.length || 0,
+          ];
+
+          // chart data
+          let months = [
+            { month: 1, income: 0 },
+            { month: 2, income: 0 },
+            { month: 3, income: 0 },
+            { month: 4, income: 0 },
+            { month: 5, income: 0 },
+            { month: 6, income: 0 },
+            { month: 7, income: 0 },
+            { month: 8, income: 0 },
+            { month: 9, income: 0 },
+            { month: 10, income: 0 },
+            { month: 11, income: 0 },
+            { month: 12, income: 0 },
+          ];
+          const chartData = yearlyIncome.map((t) => {
+            return { month: moment(t.date).month() + 1, price: t.price };
+          });
+          chartData.map((t: any) => {
+            months[t.month - 1].income += t.price;
+          });
+
+          // math and show income
+          if (income.length > 0) {
+            todayIncome = await todayIncome
+              .map((t) => t.price)
+              .reduce((a, b) => {
+                return a + b;
+              });
+            monthlyIncome = await monthlyIncome
+              .map((t) => t.price)
+              .reduce((a, b) => {
+                return a + b;
+              });
+            yearlyIncome = await yearlyIncome
+              .map((t) => t.price)
+              .reduce((a, b) => {
+                return a + b;
+              });
+
+            return {
+              message: 'درآمد با موفقیت دریافت شد !',
+              income: {
+                todayIncome,
+                monthlyIncome,
+                yearlyIncome,
+              },
+              tickets: {
+                today: tickets_Length[0],
+                month: tickets_Length[1],
+                year: tickets_Length[2],
+              },
+              chart: months,
+              success: true,
+            };
+          }
+
+          return {
+            message: 'درآمد با موفقیت دریافت شد !',
+            prices: 0,
+            tickets: {
+              today: tickets_Length[0],
+              month: tickets_Length[1],
+              year: tickets_Length[2],
+            },
+            chart: months,
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'get-income',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
         }
       )
   );

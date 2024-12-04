@@ -1,5 +1,6 @@
 import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
+import { hasAccessClass } from '../auth/hasAccess';
 
 export const wallets = new Elysia().group('/wallet', (app) => {
   return (
@@ -26,7 +27,7 @@ export const wallets = new Elysia().group('/wallet', (app) => {
       })
 
       // ! get User wallet
-      .get('/user',async ({ store: { checkToken } }) => {
+      .get('/user', async ({ store: { checkToken } }) => {
         const wallet = await Prisma.wallet.findUnique({
           where: {
             email: checkToken.userData.email,
@@ -44,14 +45,13 @@ export const wallets = new Elysia().group('/wallet', (app) => {
       .put(
         '/user/increment',
         async ({ store: { checkToken }, body: { amount } }) => {
-          
           const wallet = await Prisma.wallet.update({
             where: {
               email: checkToken.userData.email,
             },
             data: {
               Amount: {
-                increment:  amount,
+                increment: amount,
               },
             },
           });
