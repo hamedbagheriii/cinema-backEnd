@@ -1,9 +1,9 @@
 import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { arrNumberClass } from '../movie/movie';
-import { wallets } from '../wallet/wallet';
 import { hasAccessClass } from '../auth/hasAccess';
 import moment from 'moment';
+import { convertDateClass, mathClass } from '../utils/math';
 
 export const ticket = new Elysia().group('/ticket', (app) => {
   return (
@@ -240,66 +240,43 @@ export const ticket = new Elysia().group('/ticket', (app) => {
       .get(
         '/getIncome',
         async () => {
-          let income: any[] = await Prisma.sessionticket.findMany();
+          const income: any[] = await Prisma.sessionticket.findMany();
 
-          // filter by dates
-          let todayIncome = income.filter(
-            (t) => t.date >= new Date(new Date().setDate(new Date().getDay()))
-          );
-          let monthlyIncome = income.filter(
-            (t) => t.date >= new Date(new Date().setMonth(new Date().getMonth() - 1))
-          );
-          let yearlyIncome = income.filter(
-            (t) =>
-              t.date >= new Date(new Date().setFullYear(new Date().getFullYear() - 1))
-          );
+          // filter by dates =>
+          let todayIncome: any = await convertDateClass.convertDate(income, 'today');
+          let monthlyIncome: any = await convertDateClass.convertDate(income, 'month');
+          let yearlyIncome: any = await convertDateClass.convertDate(income, 'year');
 
-          // tickets length
+          // tickets length =>
           const tickets_Length = [
             todayIncome.length || 0,
             monthlyIncome.length || 0,
             yearlyIncome.length || 0,
           ];
 
-          // chart data
-          let months = [
-            { month: 1, income: 0 },
-            { month: 2, income: 0 },
-            { month: 3, income: 0 },
-            { month: 4, income: 0 },
-            { month: 5, income: 0 },
-            { month: 6, income: 0 },
-            { month: 7, income: 0 },
-            { month: 8, income: 0 },
-            { month: 9, income: 0 },
-            { month: 10, income: 0 },
-            { month: 11, income: 0 },
-            { month: 12, income: 0 },
-          ];
-          const chartData = yearlyIncome.map((t) => {
-            return { month: moment(t.date).month() + 1, price: t.price };
-          });
-          chartData.map((t: any) => {
-            months[t.month - 1].income += t.price;
-          });
+          
+          // chart data =>
+          let months: any[] = [];
+          const handleChartData = () => {
+            for (let i = 1; i <= 12; i++) {
+              months.push({ month: i, income: 0 });
+            }
 
-          // math and show income
+            const chartData = yearlyIncome.map((t: any) => {
+              return { month: moment(t.date).month() + 1, price: t.price };
+            });
+            chartData.map((t: any) => {
+              months[t.month - 1].income += t.price;
+            });
+          };
+          handleChartData();
+
+
+          // math and show income =>
           if (income.length > 0) {
-            todayIncome = await todayIncome
-              .map((t) => t.price)
-              .reduce((a, b) => {
-                return a + b;
-              });
-            monthlyIncome = await monthlyIncome
-              .map((t) => t.price)
-              .reduce((a, b) => {
-                return a + b;
-              });
-            yearlyIncome = await yearlyIncome
-              .map((t) => t.price)
-              .reduce((a, b) => {
-                return a + b;
-              });
+            todayIncome = await mathClass.reducePrice(todayIncome);
+            monthlyIncome = await mathClass.reducePrice(monthlyIncome);
+            yearlyIncome = await mathClass.reducePrice(yearlyIncome);
 
             return {
               message: 'درآمد با موفقیت دریافت شد !',
@@ -316,19 +293,19 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               chart: months,
               success: true,
             };
+          } else {
+            return {
+              message: 'درآمد با موفقیت دریافت شد !',
+              prices: 0,
+              tickets: {
+                today: 0,
+                month: 0,
+                year: 0,
+              },
+              chart: months,
+              success: true,
+            };
           }
-
-          return {
-            message: 'درآمد با موفقیت دریافت شد !',
-            prices: 0,
-            tickets: {
-              today: tickets_Length[0],
-              month: tickets_Length[1],
-              year: tickets_Length[2],
-            },
-            chart: months,
-            success: true,
-          };
         },
         {
           beforeHandle: async ({ store: { checkToken }, set }) => {
