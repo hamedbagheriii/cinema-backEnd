@@ -2,8 +2,8 @@ import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { arrNumberClass } from '../movie/movie';
 import { hasAccessClass } from '../auth/hasAccess';
-import moment from 'moment';
 import { convertDateClass, mathClass } from '../utils/math';
+import jMoment from 'moment-jalaali';
 
 export const ticket = new Elysia().group('/ticket', (app) => {
   return (
@@ -254,23 +254,46 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             yearlyIncome.length || 0,
           ];
 
-          
           // chart data =>
           let months: any[] = [];
           const handleChartData = () => {
-            for (let i = 1; i <= 12; i++) {
-              months.push({ month: i, income: 0 });
+            let monthsData = [
+              'فروردین',
+              'اردیبهشت',
+              'خرداد',
+              'تیر',
+              'مرداد',
+              'شهریور',
+              'مهر',
+              'آبان',
+              'آذر',
+              'دی',
+              'بهمن',
+              'اسفند',
+            ];
+
+            const now = jMoment();
+            let thisMonth = now.jMonth();
+            for (let i = 0; i < 12; i++) {
+              if (thisMonth == -1) thisMonth = 11;
+              months.push({
+                month: { id: thisMonth, title: monthsData[thisMonth] },
+                income: 0,
+              });
+              thisMonth--;
             }
 
-            const chartData = yearlyIncome.map((t: any) => {
-              return { month: moment(t.date).month() + 1, price: t.price };
+            months.map((t: any) => {
+              yearlyIncome.map((tt: any) => {
+                if (t.month.id == jMoment(tt.date).jMonth()) {
+                  t.income += tt.price;
+                }
+              });
             });
-            chartData.map((t: any) => {
-              months[t.month - 1].income += t.price;
-            });
+
+            months.reverse();
           };
           handleChartData();
-
 
           // math and show income =>
           if (income.length > 0) {

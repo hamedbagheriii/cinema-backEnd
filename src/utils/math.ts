@@ -1,3 +1,4 @@
+// math class =>
 class math_Class {
   async reducePrice(num: any[]) {
     if (num.length > 0) {
@@ -16,6 +17,7 @@ class math_Class {
 
 export const mathClass = new math_Class();
 
+// convert date =>
 class convertDate {
   async convertDate(income: any[], type: string) {
     switch (type) {
