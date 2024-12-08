@@ -126,33 +126,60 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       .post(
         '/add',
         async ({ body: { cinemaName, address, city, province, image }, set }) => {
-          //  upload image to s3 =>
-          const movieIMG = await imgAwcClass.uploadImage(image, 'cinemaIMG');
-          if (!movieIMG.success) {
-            set.status = 400;
-            return {
-              ...movieIMG,
-            };
-          }
-
-          const cinema = await Prisma.cinema.create({
-            data: {
-              cinemaName,
-              address,
-              city,
-              province,
-              image: {
-                create: {
-                  name: cinemaName,
-                  url: movieIMG.fileUrl || '',
-                },
-              },
-            },
-            include: {
-              movies: true,
-              image: true,
+          const checkImage = await Prisma.images.findUnique({
+            where: {
+              name: image.name,
             },
           });
+
+          // ! check image =>
+          const data = {
+            cinemaName,
+            address,
+            city,
+            province,
+          };
+          const include = {
+            movies: true,
+            image: true,
+          };
+          let cinema;
+
+          if (checkImage) {
+            cinema = await Prisma.cinema.create({
+              data: {
+                ...data,
+                image: {
+                  connect: {
+                    name: image.name,
+                  },
+                },
+              },
+              include,
+            });
+          } else {
+            // ! upload image to s3 =>
+            const movieIMG = await imgAwcClass.uploadImage(image, 'cinemaIMG');
+            if (!movieIMG.success) {
+              set.status = 400;
+              return {
+                ...movieIMG,
+              };
+            }
+
+            cinema = await Prisma.cinema.create({
+              data: {
+                ...data,
+                image: {
+                  create: {
+                    name: image.name,
+                    url: movieIMG.fileUrl || '',
+                  },
+                },
+              },
+              include,
+            });
+          }
 
           return {
             data: cinema,
@@ -181,6 +208,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
                 message: 'عکس انتخاب نشده است !',
               };
             }
+            const fileName = `${Date.now()}-${image.name}`;
           },
           body: t.Object({
             cinemaName: t.String(),
@@ -188,6 +216,84 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             city: t.String(),
             province: t.String(),
             image: t.File(),
+          }),
+        }
+      )
+
+      // ! edit cinema
+      .put(
+        '/edit/:id',
+        async ({ body: { cinemaName, address, city, province }, params: { id } }) => {
+          const cinema = await Prisma.cinema.update({
+            where: {
+              id,
+            },
+            data: {
+              cinemaName,
+              address,
+              city,
+              province,
+            },
+            include: {
+              movies: true,
+              image: true,
+            },
+          });
+
+          return {
+            data: cinema,
+            message: 'ویرایش سینما با موفقیت انجام شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ body: {}, set, store: { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'edit-cinema',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
+          body: t.Object({
+            cinemaName: t.String(),
+            address: t.String(),
+            city: t.String(),
+            province: t.String(),
+          }),
+          params: t.Object({
+            id: t.Number(),
+          }),
+        }
+      )
+
+      // ! delete cinema
+      .delete(
+        '/:id',
+        async ({ params: { id } }) => {
+          const res = await Prisma.cinema.delete({
+            where: {
+              id,
+            },
+          });
+
+          return {
+            res,
+            message: 'سینما با موفقیت حذف شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-cinema',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
+          params: t.Object({
+            id: t.Number(),
           }),
         }
       )
@@ -246,7 +352,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           }),
         }
       )
-      
+
       // ! ==================== Halls ====================
 
       // ! add halls
