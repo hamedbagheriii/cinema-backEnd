@@ -438,25 +438,30 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       )
 
       // ! edit hall
-      .delete(
-        '/halls/delete/:id',
-        async ({ params: { id } }) => {
-          const res = await Prisma.hall.delete({
+      .put(
+        '/halls/edit/:id',
+        async ({ params: { id } , body : { hallName, maximumRows, maximumCol } }) => {
+          const res = await Prisma.hall.update({
             where: {
               id,
             },
+            data : {
+              hallName,
+              maximumRows,
+              maximumCol
+            }
           });
 
           return {
             res,
-            message: 'سالن با موفقیت حذف شد !',
+            message: 'سالن با موفقیت اپدیت شد !',
             success: true,
           };
         },
         {
           beforeHandle: async ({ store: { checkToken }, set }) => {
             const checkUserRole = hasAccessClass.hasAccess(
-              'delete-hall',
+              'update-hall',
               checkToken.userData.roles,
               set
             );
@@ -465,6 +470,11 @@ export const cinema = new Elysia().group('/cinema', (app) => {
           params: t.Object({
             id: t.Number(),
           }),
+          body: t.Object({
+            hallName: t.String(),
+            maximumRows: t.Number(),
+            maximumCol: t.Number(),
+          })
         }
       )
   );
