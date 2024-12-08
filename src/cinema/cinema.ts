@@ -358,11 +358,12 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! add halls
       .post(
         '/halls/add',
-        async ({ body: { hallName, maximumRows, cinemaID } }) => {
+        async ({ body: { hallName, maximumRows, cinemaID, maximumCol } }) => {
           const hall = await Prisma.hall.create({
             data: {
               hallName,
               maximumRows,
+              maximumCol,
               cinemaID,
             },
           });
@@ -400,6 +401,69 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             hallName: t.String(),
             maximumRows: t.Number(),
             cinemaID: t.Number(),
+            maximumCol: t.Number(),
+          }),
+        }
+      )
+
+      // ! delete hall
+      .delete(
+        '/halls/delete/:id',
+        async ({ params: { id } }) => {
+          const res = await Prisma.hall.delete({
+            where: {
+              id,
+            },
+          });
+
+          return {
+            res,
+            message: 'سالن با موفقیت حذف شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-hall',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
+          params: t.Object({
+            id: t.Number(),
+          }),
+        }
+      )
+
+      // ! edit hall
+      .delete(
+        '/halls/delete/:id',
+        async ({ params: { id } }) => {
+          const res = await Prisma.hall.delete({
+            where: {
+              id,
+            },
+          });
+
+          return {
+            res,
+            message: 'سالن با موفقیت حذف شد !',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-hall',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
+          params: t.Object({
+            id: t.Number(),
           }),
         }
       )

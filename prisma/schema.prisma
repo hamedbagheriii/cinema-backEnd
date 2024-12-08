@@ -107,6 +107,7 @@ model hall {
   id          Int             @unique @default(autoincrement())
   hallName    String
   maximumRows Int
+  maximumCol Int
   cinemaData  cinema          @relation(fields: [cinemaID], references: [id])
   cinemaID    Int
   tickets     sessionticket[]
