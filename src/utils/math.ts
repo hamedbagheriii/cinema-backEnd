@@ -1,3 +1,5 @@
+import jMoment from 'moment-jalaali';
+
 // math class =>
 class math_Class {
   async reducePrice(num: any[]) {
@@ -22,20 +24,21 @@ class convertDate {
   async convertDate(income: any[], type: string) {
     switch (type) {
       case 'today':
+        let date = new Date().setHours(0, 0, 0, 0)
         return income.filter(
-          (t) => t.date >= new Date(new Date().setDate(new Date().getDay()))
+          (t) => t.paymentDate >= date
         );
         break;
 
       case 'month':
         return income.filter(
-          (t) => t.date >= new Date(new Date().setMonth(new Date().getMonth() - 1))
+          (t) => t.paymentDate >= new Date(new Date().setMonth(new Date().getMonth() - 1))
         );
         break;
 
       case 'year':
         return income.filter(
-          (t) => t.date >= new Date(new Date().setFullYear(new Date().getFullYear() - 1))
+          (t) => t.paymentDate >= new Date(new Date().setFullYear(new Date().getFullYear() - 1))
         );
         break;
 

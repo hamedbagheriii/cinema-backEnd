@@ -246,7 +246,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           let todayIncome: any = await convertDateClass.convertDate(income, 'today');
           let monthlyIncome: any = await convertDateClass.convertDate(income, 'month');
           let yearlyIncome: any = await convertDateClass.convertDate(income, 'year');
-
+          
           // tickets length =>
           const tickets_Length = [
             todayIncome.length || 0,
@@ -285,7 +285,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
 
             months.map((t: any) => {
               yearlyIncome.map((tt: any) => {
-                if (t.month.id == jMoment(tt.date).jMonth()) {
+                if (t.month.id == jMoment(tt.paymentDate).jMonth()) {
                   t.income += tt.price;
                 }
               });
