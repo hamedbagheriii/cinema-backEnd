@@ -243,6 +243,49 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
+      // ! add Movie
+      .delete(
+        '/delete/:id',
+        async ({ params: { id } }) => {
+          const movie = await Prisma.movies.delete({
+            where: {
+              id,
+            },
+          });
+
+          return {
+            message: 'فیلم با موفقیت حذف شد .',
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ params: { id }, set, store: { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-movie',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            // check movie =>
+            const checkMovie = await Prisma.movies.findUnique({
+              where: {
+                id,
+              },
+            });
+            if (!checkMovie) {
+              set.status = 404;
+              return {
+                message: 'فیلم با این نام وجود ندارد !',
+                success: false,
+              };
+            }
+          },
+          params: t.Object({
+            id: t.Number(),
+          }),
+        }
+      )
       // ! ==================== slider ====================
 
       // ! add image for slider
