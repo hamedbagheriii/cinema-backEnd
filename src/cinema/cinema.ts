@@ -299,12 +299,21 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       )
 
       // ! add movies to cinema
-      .post(
+      .put(
         '/UPMovies/:id',
         async ({ params: { id }, body: { movies } }) => {
-          const res = await Prisma.moviecinema.createMany({
-            data: movies.map((movie: number) => ({ movieId: movie, cinemaID: id })),
-          });
+          let res;
+          const checkData = await Prisma.moviecinema
+            .deleteMany({
+              where: {
+                cinemaID: id,
+              },
+            })
+            .then(async (d) => {
+              res = await Prisma.moviecinema.createMany({
+                data: movies.map((movie: number) => ({ movieId: movie, cinemaID: id })),
+              });
+            });
 
           return {
             res,
@@ -320,7 +329,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             params: { id },
           }) => {
             const checkUserRole = hasAccessClass.hasAccess(
-              'add-cinema',
+              'add-movie-cinema',
               checkToken.userData.roles,
               set
             );
@@ -440,16 +449,16 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       // ! edit hall
       .put(
         '/halls/edit/:id',
-        async ({ params: { id } , body : { hallName, maximumRows, maximumCol } }) => {
+        async ({ params: { id }, body: { hallName, maximumRows, maximumCol } }) => {
           const res = await Prisma.hall.update({
             where: {
               id,
             },
-            data : {
+            data: {
               hallName,
               maximumRows,
-              maximumCol
-            }
+              maximumCol,
+            },
           });
 
           return {
@@ -474,7 +483,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             hallName: t.String(),
             maximumRows: t.Number(),
             maximumCol: t.Number(),
-          })
+          }),
         }
       )
   );
