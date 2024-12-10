@@ -137,6 +137,14 @@ export const wallets = new Elysia().group('/wallet', (app) => {
           success: true,
         };
       },{
+        beforeHandle: async ({ store: { checkToken }, set }) => {
+          const checkUserRole = hasAccessClass.hasAccess(
+            'edit-wallets',
+            checkToken.userData.roles,
+            set
+          );
+          if ((await checkUserRole) !== true) return checkUserRole;
+        },
         body: t.Object({
           email: t.String(),
           Amount: t.Number(),

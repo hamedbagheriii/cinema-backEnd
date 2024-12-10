@@ -1,0 +1,139 @@
+{
+    "perms" : [
+        {
+            "id": 1,
+            "permName": "allAccess",
+            "category": "allAccess"
+        },
+        {
+            "id": 2,
+            "permName": "get-users",
+            "category": "get-users"
+        },
+        {
+            "id": 3,
+            "permName": "edit-users",
+            "category": "edit-users"
+        },
+        {
+            "id": 4,
+            "permName": "delete-users",
+            "category": "delete-users"
+        },
+        {
+            "id": 5,
+            "permName": "add-userRole",
+            "category": "add-userRole"
+        },
+        {
+            "id": 6,
+            "permName": "edit-userRole",
+            "category": "edit-userRole"
+        },
+        {
+            "id": 7,
+            "permName": "delete-userRole",
+            "category": "delete-userRole"
+        },
+        {
+            "id": 8,
+            "permName": "get-role",
+            "category": "get-role"
+        },
+        {
+            "id": 9,
+            "permName": "add-role",
+            "category": "add-role"
+        },
+        {
+            "id": 10,
+            "permName": "edit-role",
+            "category": "edit-role"
+        },
+        {
+            "id": 11,
+            "permName": "delete-role",
+            "category": "delete-role"
+        },
+        {
+            "id": 12,
+            "permName": "get-perm",
+            "category": "get-perm"
+        },
+        {
+            "id": 13,
+            "permName": "get-wallets",
+            "category": "get-wallets"
+        },
+        {
+            "id": 14,
+            "permName": "edit-wallets",
+            "category": "edit-wallets"
+        },
+        {
+            "id": 15,
+            "permName": "get-cinema",
+            "category": "get-cinema"
+        },
+        {
+            "id": 16,
+            "permName": "add-cinema",
+            "category": "add-cinema"
+        },
+        {
+            "id": 17,
+            "permName": "edit-cinema",
+            "category": "edit-cinema"
+        },
+        {
+            "id": 18,
+            "permName": "delete-cinema",
+            "category": "delete-cinema"
+        },
+        {
+            "id": 19,
+            "permName": "add-movie-cinema",
+            "category": "add-movie-cinema"
+        },
+        {
+            "id": 20,
+            "permName": "add-hall",
+            "category": "add-hall"
+        },
+        {
+            "id": 21,
+            "permName": "delete-hall",
+            "category": "delete-hall"
+        },
+        {
+            "id": 22,
+            "permName": "edit-hall",
+            "category": "edit-hall"
+        },
+        {
+            "id": 23,
+            "permName" : "add-movie",
+            "category": "add-movie"
+        },
+        {
+            "id": 24,
+            "permName" : "edit-movie",
+            "category": "edit-movie"
+        },
+        {
+            "id": 25,
+            "permName" : "delete-movie",
+            "category": "delete-movie"
+        },
+        {
+            "id": 26,
+            "permName" : "add-slider",
+            "category": "add-slider"
+        },
+        {
+            "id": 27,
+            "permName" : "get-income",
+            "category": "get-income"
+        }
+    ]
+}

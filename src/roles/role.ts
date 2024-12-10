@@ -2,6 +2,7 @@ import Elysia, { t } from 'elysia';
 import { auth, Prisma } from '../auth/auth';
 import { hasAccessClass } from '../auth/hasAccess';
 import { checkClass } from '../utils/checkThereIs';
+import perms from '../../roles.json';
 
 export const role = new Elysia().group('/roles', (app) => {
   return (
@@ -108,48 +109,18 @@ export const role = new Elysia().group('/roles', (app) => {
 
       // ! ==================== permissions ====================
 
-      // ! add new permission (user or admin dont have access) =>
-      .post(
-        '/perm',
-        async ({ body: { permName, category } }) => {
-          const newPerm = await Prisma.permission.create({
-            data: {
-              permName,
-              category,
-            },
-          });
-
-          return {
-            message: 'دسترسی اضافه شد !',
-            success: true,
-            perm: newPerm,
-          };
-        },
-        {
-          // beforeHandle: async ({ store: { checkToken }, set }) => {
-          //   const checkUserRole = hasAccessClass.hasAccess('dontAccess!',
-          //     checkToken.userData.roles, set);
-          //   if (await checkUserRole !== true) return checkUserRole;
-          // },
-          body: t.Object({
-            permName: t.String(),
-            category: t.String(),
-          }),
-        }
-      )
-
       // ! get all perm for show
       .get(
         '/perm',
         async () => {
-          let allPerm = await Prisma.permission.findMany();
-
+          let allPerm : any[] = perms.perms;
+          
           allPerm = allPerm.filter((t: any) => t.permName !== 'allAccess');
 
           return {
             message: 'دسترسی ها با موفقیت دریافت شد !',
             success: true,
-            perm: allPerm,
+            perms: allPerm,
           };
         },
         {
