@@ -247,11 +247,19 @@ export const movie = new Elysia().group('/movie', (app) => {
       .delete(
         '/delete/:id',
         async ({ params: { id } }) => {
-          const movie = await Prisma.movies.delete({
-            where: {
-              id,
-            },
-          });
+          const movie = await Prisma.moviecinema
+            .deleteMany({
+              where: {
+                movieId: id,
+              },
+            })
+            .then(async (res) => {
+              const delMovie = await Prisma.movies.delete({
+                where: {
+                  id,
+                },
+              });
+            });
 
           return {
             message: 'فیلم با موفقیت حذف شد .',
@@ -283,6 +291,69 @@ export const movie = new Elysia().group('/movie', (app) => {
           },
           params: t.Object({
             id: t.Number(),
+          }),
+        }
+      )
+
+      // ! edit Movie
+      .put(
+        '/edit/:id',
+        async ({
+          params: { id },
+          body: { createdAt, decription, movieName, price, time },
+          set,
+        }) => {
+          const editMovie = await Prisma.movies.update({
+            where: {
+              id,
+            },
+            data: {
+              createdAt,
+              decription,
+              movieName,
+              price: Number(price),
+              time,
+            },
+          });
+
+          return {
+            message: 'فیلم با موفقیت آپدیت شد .',
+            success: true,
+            editMovie,
+          };
+        },
+        {
+          beforeHandle: async ({ body: { movieName }, set, store: { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'edit-movie',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            // check movie =>
+            const checkMovie = await Prisma.movies.findUnique({
+              where: {
+                movieName,
+              },
+            });
+            if (checkMovie) {
+              set.status = 401;
+              return {
+                message: 'فیلم با این نام وجود دارد !',
+                success: false,
+              };
+            }
+          },
+          params: t.Object({
+            id: t.Number(),
+          }),
+          body: t.Object({
+            movieName: t.String(),
+            decription: t.String(),
+            time: t.String(),
+            price: t.String(),
+            createdAt: t.String(),
           }),
         }
       )

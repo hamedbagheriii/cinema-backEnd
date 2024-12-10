@@ -98,7 +98,7 @@ model cinema {
   city       String
   province   String
   halls      hall[]
-  movies     moviecinema[]
+  movies     moviecinema[] 
   tickets    sessionticket[]
   dates      date[]
   image      images[]

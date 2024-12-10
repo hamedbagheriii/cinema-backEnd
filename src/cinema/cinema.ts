@@ -138,6 +138,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
             address,
             city,
             province,
+            
           };
           const include = {
             movies: true,
@@ -156,7 +157,7 @@ export const cinema = new Elysia().group('/cinema', (app) => {
                 },
               },
               include,
-            });
+            })
           } else {
             // ! upload image to s3 =>
             const movieIMG = await imgAwcClass.uploadImage(image, 'cinemaIMG');
@@ -271,11 +272,26 @@ export const cinema = new Elysia().group('/cinema', (app) => {
       .delete(
         '/:id',
         async ({ params: { id } }) => {
-          const res = await Prisma.cinema.delete({
-            where: {
-              id,
-            },
-          });
+          const res = await Prisma.hall
+            .deleteMany({
+              where: {
+                cinemaID: id,
+              },
+            })
+            .then(async (res)=>{
+              const delMovie = await Prisma.moviecinema.deleteMany({
+                where: {
+                  cinemaID: id,
+                },
+              })
+            })
+            .then(async (d) => {
+              return await Prisma.cinema.delete({
+                where: {
+                  id,
+                },
+              });
+            });
 
           return {
             res,
