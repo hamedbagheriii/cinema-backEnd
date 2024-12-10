@@ -1,6 +1,7 @@
 import { PrismaClient, user } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
+import { hasAccessClass } from './hasAccess';
 
 // ! dependencies
 export const Prisma = new PrismaClient();
@@ -68,10 +69,10 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               lastName,
               fristName,
               password: await Bun.password.hash(password),
-              wallet : {
-                create : {}
-              }
-            }
+              wallet: {
+                create: {},
+              },
+            },
           });
 
           return {
@@ -200,7 +201,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
         },
         {
-          body :  t.Object({
+          body: t.Object({
             fristName: t.String({
               minLength: 2,
               error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
@@ -209,14 +210,14 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               minLength: 3,
               error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
             }),
-          })
+          }),
         }
       )
 
       // ! update User and password
       .put(
         'update/password',
-        async ({ body: { u_password , lastName, fristName }, store: { checkToken } }) => {
+        async ({ body: { u_password, lastName, fristName }, store: { checkToken } }) => {
           const user = await Prisma.user.update({
             where: {
               id: checkToken.userId,
@@ -224,7 +225,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
             data: {
               password: await Bun.password.hash(u_password),
               fristName,
-              lastName
+              lastName,
             },
           });
 
@@ -263,6 +264,192 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               minLength: 3,
               error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
             }),
+          }),
+        }
+      )
+
+      // ! ==================== need access ====================
+
+      // ! check Token validate
+      .guard({
+        headers: t.Object({
+          authorization: t.String(),
+        }),
+      })
+      .onBeforeHandle(async ({ headers: { authorization }, store, set }) => {
+        const checkToken = await auth.checkToken((authorization as string) || '');
+        if (checkToken !== null) {
+          store.checkToken = checkToken;
+        } else {
+          return {
+            message: 'توکن اشتباه است !',
+            success: false,
+          };
+        }
+
+        // main access control for role api =>
+        const checkUserRole = hasAccessClass.hasAccess(
+          'get-users',
+          checkToken.userData.roles,
+          set
+        );
+        if ((await checkUserRole) !== true) return checkUserRole;
+      })
+
+      // ! get all users
+      .get(
+        'users/:id?',
+        async ({ params: { id } }) => {
+          let data: any;
+          if (id) {
+            data = await Prisma.user.findUnique({ where: { id } });
+            data.password = null;
+          } else {
+            data = await Prisma.user.findMany();
+
+            data.map((t: any) => {
+              t.password = null;
+            });
+          }
+
+          return {
+            message: 'کاربران با موفقیت یافت شدند !',
+            success: true,
+            data,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.String()),
+          }),
+        }
+      )
+
+      // ! update User with admin
+      .put(
+        'users/update',
+        async ({ body: { fristName, lastName, email } }) => {
+          const user = await Prisma.user.update({
+            where: {
+              email,
+            },
+            data: {
+              lastName,
+              fristName,
+            },
+          });
+
+          return {
+            message: 'کاربر با موفقیت ویرایش شد !',
+            data: { ...user, password: null },
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ body: { email }, set, store: { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'edit-users',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            // check user =>
+            const checkUser = await Prisma.user.findUnique({
+              where: {
+                email,
+              },
+            });
+
+            if (checkToken === null) {
+              set.status = 401;
+              return {
+                message: 'کاربر با این ایمیل وجود ندارد !',
+              };
+            }
+          },
+          body: t.Object({
+            fristName: t.String({
+              minLength: 2,
+              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+            }),
+            lastName: t.String({
+              minLength: 3,
+              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
+            }),
+            email: t.String(),
+          }),
+        }
+      )
+
+      // ! delete User with admin
+      .delete(
+        'users/del/:id',
+        async ({ params: { id } , body : { email } }) => {
+          const delUser = await Prisma.sessionticket
+            .deleteMany({
+              where: {
+                userData: {
+                  id,
+                },
+              },
+            })
+            .then(async () => {
+              const delWallet = await Prisma.wallet.deleteMany({
+                where: {
+                  email
+                },
+              });
+            })
+            .then(async () => {
+              const delToken = await Prisma.sessiontoken.deleteMany({
+                where: {
+                  userId: id,
+                },
+              });
+            })
+            .then(async () => {
+              return await Prisma.user.delete({
+                where: {
+                  id,
+                },
+              });
+            });
+
+          return {
+            message: 'کاربر با موفقیت حذف شد !',
+            data: { ...delUser, password: null },
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({ params: { id }, set, store: { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-users',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            // check user =>
+            const checkUser = await Prisma.user.findUnique({
+              where: {
+                id,
+              },
+            });
+
+            if (checkToken === null) {
+              set.status = 401;
+              return {
+                message: 'کاربر با این آیدی وجود ندارد !',
+              };
+            }
+          },
+          params: t.Object({
+            id: t.String(),
+          }),
+          body : t.Object({
+            email: t.String(),
           }),
         }
       )
