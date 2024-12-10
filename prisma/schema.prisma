@@ -58,6 +58,7 @@ model movies {
   Tickets    sessionticket[]
   cinemaData moviecinema[]
   image      images[]
+  isShow Boolean 
 }
 
 model row {

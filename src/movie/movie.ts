@@ -159,7 +159,7 @@ export const movie = new Elysia().group('/movie', (app) => {
       .post(
         '/add',
         async ({
-          body: { movieName, decription, time, price, createdAt, image },
+          body: { movieName, decription, time, price, createdAt, image, isShow },
           set,
         }) => {
           //  upload image to s3 =>
@@ -178,6 +178,7 @@ export const movie = new Elysia().group('/movie', (app) => {
               time,
               createdAt,
               price: Number(price),
+              isShow,
               image: {
                 create: {
                   name: movieName,
@@ -239,6 +240,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             price: t.String(),
             createdAt: t.String(),
             image: t.File(),
+            isShow: t.BooleanString(),
           }),
         }
       )
@@ -300,7 +302,7 @@ export const movie = new Elysia().group('/movie', (app) => {
         '/edit/:id',
         async ({
           params: { id },
-          body: { createdAt, decription, movieName, price, time },
+          body: { createdAt, decription, movieName, price, time, isShow },
           set,
         }) => {
           const editMovie = await Prisma.movies.update({
@@ -313,6 +315,7 @@ export const movie = new Elysia().group('/movie', (app) => {
               movieName,
               price: Number(price),
               time,
+              isShow,
             },
           });
 
@@ -323,7 +326,12 @@ export const movie = new Elysia().group('/movie', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { movieName }, set, store: { checkToken } }) => {
+          beforeHandle: async ({
+            body: { movieName },
+            params: { id },
+            set,
+            store: { checkToken },
+          }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'edit-movie',
               checkToken.userData.roles,
@@ -332,12 +340,13 @@ export const movie = new Elysia().group('/movie', (app) => {
             if ((await checkUserRole) !== true) return checkUserRole;
 
             // check movie =>
-            const checkMovie = await Prisma.movies.findUnique({
+            const checkMovie = await Prisma.movies.findMany({
               where: {
                 movieName,
+                id: { not: id },
               },
             });
-            if (checkMovie) {
+            if (checkMovie.length > 0) {
               set.status = 401;
               return {
                 message: 'فیلم با این نام وجود دارد !',
@@ -354,6 +363,7 @@ export const movie = new Elysia().group('/movie', (app) => {
             time: t.String(),
             price: t.String(),
             createdAt: t.String(),
+            isShow: t.BooleanString(),
           }),
         }
       )
