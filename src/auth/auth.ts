@@ -385,7 +385,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       // ! delete User with admin
       .delete(
         'users/del/:id',
-        async ({ params: { id } , body : { email } }) => {
+        async ({ params: { id }, body: { email } }) => {
           const delUser = await Prisma.sessionticket
             .deleteMany({
               where: {
@@ -397,7 +397,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
             .then(async () => {
               const delWallet = await Prisma.wallet.deleteMany({
                 where: {
-                  email
+                  email,
                 },
               });
             })
@@ -448,7 +448,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           params: t.Object({
             id: t.String(),
           }),
-          body : t.Object({
+          body: t.Object({
             email: t.String(),
           }),
         }

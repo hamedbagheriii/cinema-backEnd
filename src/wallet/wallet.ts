@@ -68,5 +68,79 @@ export const wallets = new Elysia().group('/wallet', (app) => {
           }),
         }
       )
+
+      // ! ==================== need access ====================
+      .onBeforeHandle(async ({ store: { checkToken }, set }) => {
+        const checkUserRole = hasAccessClass.hasAccess(
+          'get-wallets',
+          checkToken.userData.roles,
+          set
+        );
+        if ((await checkUserRole) !== true) return checkUserRole;
+      })
+
+      // ! get all wallet
+      .get(
+        '/all/:id?',
+        async ({ params: { id } }) => {
+          let wallets: any;
+          if (id) {
+            wallets = await Prisma.wallet.findUnique({
+              where: {
+                id,
+              },
+              include: {
+                userData: true,
+              },
+            });
+
+            wallets.userData.password = null;
+          } else {
+            wallets = await Prisma.wallet.findMany({
+              include: {
+                userData: true,
+              },
+            });
+
+            wallets.map((t: any) => {
+              t.userData.password = null;
+            });
+          }
+
+          return {
+            message: 'کیف پول ها با موفقیت دریافت شدند !',
+            wallets,
+            success: true,
+          };
+        },
+        {
+          params: t.Object({
+            id: t.Optional(t.String()),
+          }),
+        }
+      )
+
+      // ! update wallet with admin
+      .put('/user/update', async ({ body: { email, Amount }, set }) => {
+        const wallet = await Prisma.wallet.update({
+          where: {
+            email,
+          },
+          data: {
+            Amount,
+          },
+        });
+
+        return {
+          message: 'کیف پول با موفقیت ویرایش شد !',
+          wallet,
+          success: true,
+        };
+      },{
+        body: t.Object({
+          email: t.String(),
+          Amount: t.Number(),
+        }), 
+      })
   );
 });
