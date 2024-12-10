@@ -142,7 +142,9 @@ export const role = new Elysia().group('/roles', (app) => {
       .get(
         '/perm',
         async () => {
-          const allPerm = await Prisma.permission.findMany();
+          let allPerm = await Prisma.permission.findMany();
+
+          allPerm = allPerm.filter((t: any) => t.permName !== 'allAccess');
 
           return {
             message: 'دسترسی ها با موفقیت دریافت شد !',
@@ -223,7 +225,11 @@ export const role = new Elysia().group('/roles', (app) => {
           const include = {
             permissions: {
               include: {
-                permissionData: true,
+                permissionData: {
+                  select: {
+                    id: true,
+                  },
+                },
               },
             },
           };
@@ -239,6 +245,10 @@ export const role = new Elysia().group('/roles', (app) => {
           } else {
             allRole = await Prisma.role.findMany({
               include,
+            });
+
+            allRole = allRole.filter((t: any) => {
+              return t.roleName !== 'SuperAdmin' 
             });
           }
 
