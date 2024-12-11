@@ -2,6 +2,7 @@ import { PrismaClient, user } from '@prisma/client';
 import Elysia, { error, t } from 'elysia';
 import { authClass } from './isUser';
 import { hasAccessClass } from './hasAccess';
+import { checkClass } from '../utils/checkThereIs';
 
 // ! dependencies
 export const Prisma = new PrismaClient();
@@ -301,11 +302,19 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         'users/:id?',
         async ({ params: { id } }) => {
           let data: any;
+          let include = {
+            roles: {
+              include: {
+                roleData: true,
+              },
+            },
+          };
+
           if (id) {
-            data = await Prisma.user.findUnique({ where: { id } });
+            data = await Prisma.user.findUnique({ where: { id }, include });
             data.password = null;
           } else {
-            data = await Prisma.user.findMany();
+            data = await Prisma.user.findMany({ include });
 
             data.map((t: any) => {
               t.password = null;
@@ -328,16 +337,38 @@ export const userPanel = new Elysia().group('/auth', (app) => {
       // ! update User with admin
       .put(
         'users/update',
-        async ({ body: { fristName, lastName, email } }) => {
-          const user = await Prisma.user.update({
+        async ({ body: { fristName, lastName, email, roles } }) => {
+          const userData: any = await Prisma.user.findUnique({
             where: {
               email,
             },
-            data: {
-              lastName,
-              fristName,
-            },
           });
+
+          let data = {
+            lastName,
+            fristName,
+          };
+          let user;
+
+          // ! edit roles
+          user = await Prisma.rolesuser
+            .deleteMany({
+              where: {
+                userData: {
+                  email,
+                },
+              },
+            })
+            .then(async () => {
+              return await Prisma.rolesuser.createMany({
+                data: roles.map((t: any) => {
+                  return {
+                    roleID: t,
+                    userID: userData.id,
+                  };
+                }),
+              });
+            });
 
           return {
             message: 'کاربر با موفقیت ویرایش شد !',
@@ -346,7 +377,11 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
         },
         {
-          beforeHandle: async ({ body: { email }, set, store: { checkToken } }) => {
+          beforeHandle: async ({
+            body: { email, roles },
+            set,
+            store: { checkToken },
+          }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'edit-users',
               checkToken.userData.roles,
@@ -367,6 +402,10 @@ export const userPanel = new Elysia().group('/auth', (app) => {
                 message: 'کاربر با این ایمیل وجود ندارد !',
               };
             }
+
+            // validate for there is role =>
+            let allRoles: any[] = await Prisma.role.findMany();
+            return checkClass.validate(allRoles, roles, set, 'نقش');
           },
           body: t.Object({
             fristName: t.String({
@@ -378,6 +417,7 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
             }),
             email: t.String(),
+            roles: t.Array(t.Optional(t.Number())),
           }),
         }
       )
@@ -450,6 +490,89 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           }),
           body: t.Object({
             email: t.String(),
+          }),
+        }
+      )
+
+      // ! add user with admin
+      .post(
+        'users/add',
+        async ({ body: { email, password, fristName, lastName, roles } }) => {
+          let user;
+          let data = {
+            email,
+            lastName,
+            fristName,
+            password: await Bun.password.hash(password),
+            wallet: {
+              create: {},
+            },
+          };
+
+          if (roles.length > 0) {
+            user = await Prisma.user.create({
+              data: {
+                ...data,
+                roles: {
+                  createMany: {
+                    data: roles.map((t: any) => {
+                      return {
+                        roleID: t,
+                      };
+                    }),
+                  },
+                },
+              },
+            });
+          } else {
+            user = await Prisma.user.create({
+              data,
+            });
+          }
+
+          return {
+            message: 'کاربر با موفقیت ثبت نام شد !',
+            data: { ...user, password: null },
+            success: true,
+          };
+        },
+        {
+          beforeHandle: async ({
+            store: { isUser, checkToken },
+            body: { roles },
+            set,
+          }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'add-users',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            if (isUser) {
+              set.status = 401;
+              return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
+            }
+
+            // validate for there is role =>
+            let allRoles: any[] = await Prisma.role.findMany();
+            return checkClass.validate(allRoles, roles, set, 'نقش');
+          },
+          body: t.Object({
+            email: t.String(),
+            password: t.String({
+              minLength: 6,
+              error: 'رمز عبور باید حداقل 6 کاراکتر داشته باشد !',
+            }),
+            fristName: t.String({
+              minLength: 2,
+              error: 'نام باید حداقل 2 کاراکتر داشته باشد !',
+            }),
+            lastName: t.String({
+              minLength: 3,
+              error: 'نام خانوادگی باید حداقل 3 کاراکتر داشته باشد !',
+            }),
+            roles: t.Array(t.Optional(t.Number())),
           }),
         }
       )

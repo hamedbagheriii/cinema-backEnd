@@ -35,86 +35,59 @@ export const role = new Elysia().group('/roles', (app) => {
         if ((await checkUserRole) !== true) return checkUserRole;
       })
 
-      // ! ==================== user roles ====================
+      // ! ==================== permissions ====================
 
-      // ! add user roles =>
-      .put(
-        '/addUser',
-        async ({ body: { userID, roles }, set }) => {
-          // handle check there is role in edit userRoles =>
-          let allRoles: any[] = await Prisma.rolesuser.findMany({
-            where: {
-              userID,
-            },
-            include: {
-              roleData: {
-                include: {
-                  permissions: {
-                    include: {
-                      permissionData: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
+      // ! add all perms for admin
+      .get(
+        '/perm/addAll',
+        async (req: any) => {
+          let allPerm: any[] = perms.perms;
+          
+          allPerm = allPerm.filter((t: any) => t.permName !== 'allAccess');
 
-          allRoles = allRoles.map((t) => t.roleData.id);
-
-          const notExist: number[] = allRoles.filter((t) => !roles.includes(t));
-          const isExist: number[] = roles.filter((t) => !allRoles.includes(t));
-
-          // remove old and add new roles =>
-          const removeUserRole = await Prisma.rolesuser.deleteMany({
-            where: {
-              userID,
-              roleID: {
-                in: notExist || [],
-              },
-            },
-          });
-          const addNewUser = await Prisma.rolesuser.createMany({
-            data: isExist.map((roleID) => {
+          const data = await Prisma.permission.createMany({
+            data: allPerm.map((t: any) => {
               return {
-                userID,
-                roleID,
+                id: t.id,
+                permName: t.permName,
+                category: t.category,
               };
             }),
           });
 
           return {
-            message: 'نقش های کاربر با موفقیت ویرایش شد !',
+            message: 'دسترسی ها با موفقیت اضافه شد !',
+            perms: data,
             success: true,
           };
         },
         {
-          beforeHandle: async ({ store: { checkToken }, set, body: { roles } }) => {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
             const checkUserRole = hasAccessClass.hasAccess(
-              'add-userRole',
+              'allAccess',
               checkToken.userData.roles,
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
-
-            // validate for there is role =>
-            let allRoles: any[] = await Prisma.role.findMany();
-            return checkClass.validate(allRoles, roles, set, 'نقش');
+            
+            const checkPerms = await Prisma.permission.findMany();
+            
+            if (checkPerms.length === 25) {
+              return {
+                message: 'همه دسترسی ها قبلا اضافه شده است !',
+                success: false,
+              };
+            }
           },
-          body: t.Object({
-            userID: t.String(),
-            roles: t.Array(t.Number()),
-          }),
         }
       )
-
-      // ! ==================== permissions ====================
 
       // ! get all perm for show
       .get(
         '/perm',
         async () => {
-          let allPerm : any[] = perms.perms;
-          
+          let allPerm: any[] = perms.perms;
+
           allPerm = allPerm.filter((t: any) => t.permName !== 'allAccess');
 
           return {
@@ -219,7 +192,7 @@ export const role = new Elysia().group('/roles', (app) => {
             });
 
             allRole = allRole.filter((t: any) => {
-              return t.roleName !== 'SuperAdmin' 
+              return t.roleName !== 'SuperAdmin';
             });
           }
 
