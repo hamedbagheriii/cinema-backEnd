@@ -246,7 +246,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           let todayIncome: any = await convertDateClass.convertDate(income, 'today');
           let monthlyIncome: any = await convertDateClass.convertDate(income, 'month');
           let yearlyIncome: any = await convertDateClass.convertDate(income, 'year');
-          
+
           // tickets length =>
           const tickets_Length = [
             todayIncome.length || 0,
@@ -339,6 +339,101 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             );
             if ((await checkUserRole) !== true) return checkUserRole;
           },
+        }
+      )
+
+      // ! get all tickets with admin
+      .get(
+        '/all',
+        async () => {
+          const allTickets = await Prisma.sessionticket.findMany({
+            include: {
+              cinemaData: true,
+              hallData: true,
+              movieData: true,
+              rows: true,
+              userData: true,
+            },
+          });
+
+          allTickets.map((ticket: any) => {
+            ticket.userData.password = null;
+          });
+
+          return {
+            message: 'تیکت ها با موفقیت دریافت شدند !',
+            success: true,
+            data: allTickets,
+          };
+        },
+        {
+          beforeHandle: async ({ store: { checkToken }, set }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'get-tickets',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+          },
+        }
+      )
+
+      .delete(
+        '/del/:ticket',
+        async ({ params: { ticket } }) => {
+          const delTicket = await Prisma.row
+            .deleteMany({
+              where: {
+                ticket,
+              },
+            })
+            .then(async () => {
+              return await Prisma.sessionticket.delete({
+                where: {
+                  ticket,
+                },
+              });
+            });
+
+          return {
+            message: 'تیکت با موفقیت حذف شد !',
+            success: true,
+            delTicket,
+          };
+        },
+        {
+          beforeHandle: async ({ params: { ticket }, set , store : { checkToken } }) => {
+            const checkUserRole = hasAccessClass.hasAccess(
+              'delete-tickets',
+              checkToken.userData.roles,
+              set
+            );
+            if ((await checkUserRole) !== true) return checkUserRole;
+
+            const isTicket = await Prisma.sessionticket.findUnique({
+              where: {
+                ticket,
+              },
+            });
+
+            if (!isTicket) {
+              set.status = 404;
+              return {
+                success: false,
+                message: 'تیکت مورد نظر وجود ندارد !',
+              };
+            } 
+            else if (isTicket.useTicket) {
+              set.status = 403;
+              return {
+                success: false,
+                message: 'تیکت مورد نظر استفاده شده است !',
+              };
+            }
+          },
+          params: t.Object({
+            ticket: t.Number(),
+          }),
         }
       )
   );
