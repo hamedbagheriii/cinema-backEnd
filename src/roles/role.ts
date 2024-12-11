@@ -72,7 +72,7 @@ export const role = new Elysia().group('/roles', (app) => {
             
             const checkPerms = await Prisma.permission.findMany();
             
-            if (checkPerms.length === 25) {
+            if (checkPerms.length === 27) {
               return {
                 message: 'همه دسترسی ها قبلا اضافه شده است !',
                 success: false,
@@ -98,6 +98,8 @@ export const role = new Elysia().group('/roles', (app) => {
         },
         {
           beforeHandle: async ({ store: { checkToken }, set }) => {
+            console.log(checkToken.userData.roles);
+            
             const checkUserRole = hasAccessClass.hasAccess(
               'get-perm',
               checkToken.userData.roles,

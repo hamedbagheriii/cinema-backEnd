@@ -119,6 +119,16 @@
             "id": 25,
             "permName" : "get-income",
             "category": "get-income"
+        },
+        {
+            "id": 26,
+            "permName" : "get-tickets",
+            "category": "get-tickets"
+        },
+        {
+            "id": 27,
+            "permName" : "delete-tickets",
+            "category": "delete-tickets"
         }
     ]
 }

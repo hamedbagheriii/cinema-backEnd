@@ -44,8 +44,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             dateEvent,
             Time,
             price,
-          },
-          store: { checkToken },
+          }
         }) => {
           const addTicket = await Prisma.sessionticket.create({
             data: {
@@ -75,7 +74,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           // ! decrement user wallet amount
           const walletDec = await Prisma.wallet.update({
             where: {
-              email: checkToken.userData.email,
+              email
             },
             data: {
               Amount: {
@@ -88,13 +87,12 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         },
         {
           beforeHandle: async ({
-            store: { checkToken },
-            body: { price, dateEvent, cinemaID },
+            body: { price, dateEvent, cinemaID , email},
             set,
           }) => {
             const WalletData: any = await Prisma.wallet.findUnique({
               where: {
-                email: checkToken.userData.email,
+                email: email,
               },
             });
             const date = await Prisma.date.findUnique({
@@ -378,6 +376,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
         }
       )
 
+      // ! delete tickets with admin
       .delete(
         '/del/:ticket',
         async ({ params: { ticket } }) => {
@@ -433,6 +432,96 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           },
           params: t.Object({
             ticket: t.Number(),
+          }),
+        }
+      )
+
+      // ! update tickets with admin
+      .put(
+        '/edit/:ticket',
+        async ({ body: { rows, useTicket, cinemaID, hallID, dateEvent, Time, price }, params: { ticket } }) => {
+          const editTicket = await Prisma.sessionticket.update({
+            where: {
+              ticket,
+            },
+            data: {
+              rows: {
+                create: rows.map((item: any) => {
+                  return {
+                    row: item.row,
+                    selectedSeats: item.selectedSeats.toString(),
+                  };
+                }),
+              },
+              useTicket,
+              cinemaID,
+              hallID,
+              date: dateEvent,
+              Time,
+              price,
+            },
+            include: {
+              rows: true,
+            },
+          });
+
+          return {
+            message: 'تیکت با موفقیت ویرایش شد !',
+            success: true,
+            editTicket,
+          };
+        },
+        {
+          beforeHandle: async ({
+            body: { price, dateEvent, cinemaID },
+            set,
+            store: { checkToken },
+          }) => {
+            // ! check wallet =>
+            const WalletData: any = await Prisma.wallet.findUnique({
+              where: {
+                email: checkToken.userData.email,
+              },
+            });
+
+            // ! check date =>
+            const date = await Prisma.date.findUnique({
+              where: {
+                date: dateEvent,
+              },
+            });
+            if (!date) {
+              const newDate = await Prisma.date.create({
+                data: {
+                  date: dateEvent,
+                  cinemaID,
+                },
+              });
+            }
+
+            if (WalletData.Amount < price) {
+              set.status = 400;
+              return {
+                message: 'مبلغ موجودی کیف پول شما کافی نمیباشد .',
+                success: false,
+              };
+            }
+          },
+          params: t.Object({
+            ticket: t.Number(),
+          }),
+          body: t.Object({
+            email: t.String(),
+            movieId: t.Number(),
+            rows: t.Array(
+              t.Object({ selectedSeats: t.Array(t.Number()), row: t.Number() })
+            ),
+            useTicket: t.Boolean(),
+            cinemaID: t.Number(),
+            hallID: t.Number(),
+            dateEvent: t.Date(),
+            Time: t.String(),
+            price: t.Number(),
           }),
         }
       )

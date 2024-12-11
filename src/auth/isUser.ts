@@ -38,7 +38,13 @@ export class authClass {
                   include : {
                     permissions : {
                       include : {
-                        permissionData : true
+                        permissionData : {
+                          select : {
+                            category : true,
+                            id : true,
+                            permName : true ,
+                          }
+                        }
                       }
                     }
                   }
