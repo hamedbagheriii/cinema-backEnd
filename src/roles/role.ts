@@ -98,8 +98,6 @@ export const role = new Elysia().group('/roles', (app) => {
         },
         {
           beforeHandle: async ({ store: { checkToken }, set }) => {
-            console.log(checkToken.userData.roles);
-            
             const checkUserRole = hasAccessClass.hasAccess(
               'get-perm',
               checkToken.userData.roles,
