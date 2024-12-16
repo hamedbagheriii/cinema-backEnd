@@ -480,6 +480,13 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               });
             })
             .then(async () => {
+              const delUserRole = await Prisma.rolesuser.deleteMany({
+                where: {
+                  userID: id,
+                },
+              });
+            })
+            .then(async () => {
               return await Prisma.user.delete({
                 where: {
                   id,

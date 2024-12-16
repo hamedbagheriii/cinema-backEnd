@@ -42,7 +42,7 @@ export const role = new Elysia().group('/roles', (app) => {
         '/perm/addAll',
         async (req: any) => {
           let allPerm: any[] = perms.perms;
-          
+
           allPerm = allPerm.filter((t: any) => t.permName !== 'allAccess');
 
           const data = await Prisma.permission.createMany({
@@ -69,9 +69,9 @@ export const role = new Elysia().group('/roles', (app) => {
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
-            
+
             const checkPerms = await Prisma.permission.findMany();
-            
+
             if (checkPerms.length === 27) {
               return {
                 message: 'همه دسترسی ها قبلا اضافه شده است !',
@@ -119,6 +119,13 @@ export const role = new Elysia().group('/roles', (app) => {
               where: {
                 roleID: id,
               },
+            })
+            .then(async () => {
+              const delUserRole = await Prisma.rolesuser.deleteMany({
+                where: {
+                  roleID: id,
+                },
+              });
             })
             .then(async () => {
               const deleteRole = await Prisma.role.delete({
