@@ -311,24 +311,33 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
 
           if (id) {
-            data = await Prisma.user.findUnique({ where: { id , roles : {
-              every : {
-                roleID : {
-                  not : 1
-                }
-              }
-            }}, include ,});
+            data = await Prisma.user.findUnique({
+              where: {
+                id,
+                roles: {
+                  every: {
+                    roleID: {
+                      not: 1,
+                    },
+                  },
+                },
+              },
+              include,
+            });
             data.password = null;
           } else {
-            data = await Prisma.user.findMany({ include , where : {
-              roles : {
-                every : {
-                  roleID : {
-                    not : 1
-                  }
-                }
-              } 
-            }});
+            data = await Prisma.user.findMany({
+              include,
+              where: {
+                roles: {
+                  every: {
+                    roleID: {
+                      not: 1,
+                    },
+                  },
+                },
+              },
+            });
 
             data.map((t: any) => {
               t.password = null;
@@ -374,13 +383,21 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               },
             })
             .then(async () => {
-              return await Prisma.rolesuser.createMany({
+              const newRoles = await Prisma.rolesuser.createMany({
                 data: roles.map((t: any) => {
                   return {
                     roleID: t,
                     userID: userData.id,
                   };
                 }),
+              });
+            })
+            .then(async () => {
+              return await Prisma.user.update({
+                where: {
+                  email,
+                },
+                data,
               });
             });
 
@@ -552,8 +569,8 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         },
         {
           beforeHandle: async ({
-            store: {  checkToken },
-            body: { roles , email},
+            store: { checkToken },
+            body: { roles, email },
             set,
           }) => {
             const checkUserRole = hasAccessClass.hasAccess(

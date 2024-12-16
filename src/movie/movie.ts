@@ -245,7 +245,7 @@ export const movie = new Elysia().group('/movie', (app) => {
         }
       )
 
-      // ! add Movie
+      // ! delete Movie
       .delete(
         '/delete/:id',
         async ({ params: { id } }) => {
