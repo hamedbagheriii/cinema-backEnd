@@ -63,6 +63,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
               cinemaID,
               hallID,
               date: dateEvent,
+              paymentDate: dateEvent,
               Time,
               price,
             },

@@ -87,7 +87,7 @@ model sessionticket {
   date       DateTime
   Time       String
   price      Int
-  paymentDate DateTime? @default(now())
+  paymentDate DateTime 
 }
 
 // ! ----- MODELS FOR CINEMA ----- !
