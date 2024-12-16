@@ -44,7 +44,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
             dateEvent,
             Time,
             price,
-          }
+          },
         }) => {
           const addTicket = await Prisma.sessionticket.create({
             data: {
@@ -74,7 +74,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           // ! decrement user wallet amount
           const walletDec = await Prisma.wallet.update({
             where: {
-              email
+              email,
             },
             data: {
               Amount: {
@@ -86,10 +86,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           return { addTicket, success: true, message: 'تیکت با موفقیت افزوده شد !' };
         },
         {
-          beforeHandle: async ({
-            body: { price, dateEvent, cinemaID , email},
-            set,
-          }) => {
+          beforeHandle: async ({ body: { price, dateEvent, cinemaID, email }, set }) => {
             const WalletData: any = await Prisma.wallet.findUnique({
               where: {
                 email: email,
@@ -380,16 +377,36 @@ export const ticket = new Elysia().group('/ticket', (app) => {
       .delete(
         '/del/:ticket',
         async ({ params: { ticket } }) => {
-          const delTicket = await Prisma.row
+          const ticketData = await Prisma.sessionticket.findUnique({
+            where: {
+              ticket,
+            },
+          });
+
+          // delete tickets
+          const delRow = await Prisma.row
             .deleteMany({
               where: {
                 ticket,
               },
             })
             .then(async () => {
-              return await Prisma.sessionticket.delete({
+              const delTicket = await Prisma.sessionticket.delete({
                 where: {
                   ticket,
+                },
+              });
+            })
+            .then(async () => {
+              // Increase user wallet when ticket deleted
+              const IncWallet = await Prisma.wallet.update({
+                where: {
+                  email: ticketData?.email,
+                },
+                data: {
+                  Amount: {
+                    increment: ticketData?.price,
+                  },
                 },
               });
             });
@@ -397,11 +414,11 @@ export const ticket = new Elysia().group('/ticket', (app) => {
           return {
             message: 'تیکت با موفقیت حذف شد !',
             success: true,
-            delTicket,
+            delRow,
           };
         },
         {
-          beforeHandle: async ({ params: { ticket }, set , store : { checkToken } }) => {
+          beforeHandle: async ({ params: { ticket }, set, store: { checkToken } }) => {
             const checkUserRole = hasAccessClass.hasAccess(
               'delete-tickets',
               checkToken.userData.roles,
@@ -421,8 +438,7 @@ export const ticket = new Elysia().group('/ticket', (app) => {
                 success: false,
                 message: 'تیکت مورد نظر وجود ندارد !',
               };
-            } 
-            else if (isTicket.useTicket) {
+            } else if (isTicket.useTicket) {
               set.status = 403;
               return {
                 success: false,
@@ -439,7 +455,10 @@ export const ticket = new Elysia().group('/ticket', (app) => {
       // ! update tickets with admin
       .put(
         '/edit/:ticket',
-        async ({ body: { rows, useTicket, cinemaID, hallID, dateEvent, Time, price }, params: { ticket } }) => {
+        async ({
+          body: { rows, useTicket, cinemaID, hallID, dateEvent, Time, price },
+          params: { ticket },
+        }) => {
           const editTicket = await Prisma.sessionticket.update({
             where: {
               ticket,

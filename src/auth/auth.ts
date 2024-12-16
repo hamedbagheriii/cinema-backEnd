@@ -311,10 +311,24 @@ export const userPanel = new Elysia().group('/auth', (app) => {
           };
 
           if (id) {
-            data = await Prisma.user.findUnique({ where: { id }, include });
+            data = await Prisma.user.findUnique({ where: { id , roles : {
+              every : {
+                roleID : {
+                  not : 1
+                }
+              }
+            }}, include ,});
             data.password = null;
           } else {
-            data = await Prisma.user.findMany({ include });
+            data = await Prisma.user.findMany({ include , where : {
+              roles : {
+                every : {
+                  roleID : {
+                    not : 1
+                  }
+                }
+              } 
+            }});
 
             data.map((t: any) => {
               t.password = null;
@@ -538,8 +552,8 @@ export const userPanel = new Elysia().group('/auth', (app) => {
         },
         {
           beforeHandle: async ({
-            store: { isUser, checkToken },
-            body: { roles },
+            store: {  checkToken },
+            body: { roles , email},
             set,
           }) => {
             const checkUserRole = hasAccessClass.hasAccess(
@@ -548,8 +562,13 @@ export const userPanel = new Elysia().group('/auth', (app) => {
               set
             );
             if ((await checkUserRole) !== true) return checkUserRole;
+            const checkUser = await Prisma.user.findUnique({
+              where: {
+                email,
+              },
+            });
 
-            if (isUser) {
+            if (checkUser) {
               set.status = 401;
               return { message: 'کاربر قبلا ثبت نام کرده است !', success: false };
             }
